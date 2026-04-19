@@ -1,11 +1,5 @@
 import mysql.connector
-import pandas as pd
-import numpy as np
-import json
-from sklearn.model_selection import train_test_split
-from sklearn.metrics.pairwise import cosine_similarity
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Embedding, Flatten, Dense, Concatenate
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -857,6 +851,14 @@ def recommended_module():
 # ------------------------------
 # LOAD DATA FROM DATABASE
 # ------------------------------
+import pandas as pd
+import numpy as np
+import json
+#from sklearn.model_selection import train_test_split
+from sklearn.metrics.pairwise import cosine_similarity
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Embedding, Flatten, Dense, Concatenate
+
 @app.route('/recommend')
 @login_required
 def recommend():
