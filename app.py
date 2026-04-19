@@ -3,7 +3,7 @@ import mysql.connector
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-
+import json
 import os
 from flask import render_template, request, redirect, url_for
 from werkzeug.utils import secure_filename
@@ -851,17 +851,15 @@ def recommended_module():
 # ------------------------------
 # LOAD DATA FROM DATABASE
 # ------------------------------
-import pandas as pd
-import numpy as np
-import json
-#from sklearn.model_selection import train_test_split
-from sklearn.metrics.pairwise import cosine_similarity
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Embedding, Flatten, Dense, Concatenate
-
 @app.route('/recommend')
 @login_required
 def recommend():
+    import pandas as pd
+    import numpy as np
+    #from sklearn.model_selection import train_test_split
+    from sklearn.metrics.pairwise import cosine_similarity
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import Input, Embedding, Flatten, Dense, Concatenate
 
     chosen_style = session.get('learning_style')
     user_id = session.get('user_id')
