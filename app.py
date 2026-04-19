@@ -33,23 +33,24 @@ def convert_to_embed(url):
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret-key-before-deployment")
 
-# --- Database Connection Function ---
-def get_db_connection():
-    return mysql.connector.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", "Mysql@work12"),
-        database=os.environ.get("DB_NAME", "pcle_db")
-    )
-
+# --- Database Connection Function (local)---
 #def get_db_connection():
 #    return mysql.connector.connect(
-#        host=os.environ["DB_HOST"],
-#        user=os.environ["DB_USER"],
-#        password=os.environ["DB_PASSWORD"],
-#        database=os.environ["DB_NAME"],
-#        port=int(os.environ.get("DB_PORT", 3306))
+#        host=os.environ.get("DB_HOST", "localhost"),
+#        user=os.environ.get("DB_USER", "root"),
+#        password=os.environ.get("DB_PASSWORD", "Mysql@work12"),
+#        database=os.environ.get("DB_NAME", "pcle_db")
 #    )
+
+# --- Database Connection Function (railway)---
+def get_db_connection():
+    return mysql.connector.connect(
+        host=os.environ.get("DB_HOST"),
+        port=int(os.environ.get("DB_PORT", 3306)),
+        user=os.environ.get("DB_USER"),
+        password=os.environ.get("DB_PASSWORD"),
+        database=os.environ.get("DB_NAME")
+    )
 
 
 # Login required
