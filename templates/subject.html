@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PCLE LMS - Modules</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='subject.css') }}">
+</head>
+<body>
+
+<!-- HEADER -->
+
+<div class="layout">
+
+  <!-- SIDEBAR (ONLY SHOW AFTER LOGIN) -->
+  {% if session.get('user_id') %}
+  <aside class="sidebar">
+    <h3>👤 {{ session.get('user_name') }}</h3>
+    <p>Style: {{ session.get('learning_style_full', 'Not set') }}</p>
+
+    <ul class="progress">
+  <li class="{{ 'done' if session.get('subject_done') else '' }}">Step 1: Subject</li>
+  <li class="{{ 'done' if session.get('preassessment_done') else '' }}">Step 2: Pre-Assessment</li>
+  <li class="{{ 'done' if session.get('style_done') else '' }}">Step 3: Learning Style</li>
+  <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Modules</li>
+  <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
+  <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
+</ul>
+  </aside>
+  {% endif %}
+
+  <div class="main-content">
+    
+<header>
+  <div class="logo">🎓 PCLE LMS</div>
+  <nav>
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('logout') }}">Logout</a></li>
+    </ul>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>Select a Module</h1>
+  <p>Please choose a subject to start your personalised learning journey.</p>
+</section>
+
+<!-- MODULE CARDS -->
+<section class="quick-access">
+
+  {% for m in modules %}
+  <div class="card">
+    <span class="status">Available</span>
+
+    <h3>{{ m.module_name }}</h3>
+    <p>{{ m.module_description }}</p>
+
+    <div class="card-action">
+      <a href="{{ url_for('module', module_name=m.module_name) }}" class="btn-small">
+        Enter Module
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2026 PCLE LMS. All rights reserved. For research use only.</p>
+</footer>
+
+  </div>
+</div>
+
+</body>
+</html>
