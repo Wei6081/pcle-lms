@@ -34,22 +34,22 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret-key-before-deployment")
 
 # --- Database Connection Function ---
-#def get_db_connection():
-#    return mysql.connector.connect(
-#        host=os.environ.get("DB_HOST", "localhost"),
-#        user=os.environ.get("DB_USER", "root"),
-#        password=os.environ.get("DB_PASSWORD", "Mysql@work12"),
-#        database=os.environ.get("DB_NAME", "pcle_db")
-#    )
-
 def get_db_connection():
     return mysql.connector.connect(
-        host=os.environ["DB_HOST"],
-        user=os.environ["DB_USER"],
-        password=os.environ["DB_PASSWORD"],
-        database=os.environ["DB_NAME"],
-        port=int(os.environ.get("DB_PORT", 3306))
+        host=os.environ.get("DB_HOST", "localhost"),
+        user=os.environ.get("DB_USER", "root"),
+        password=os.environ.get("DB_PASSWORD", "Mysql@work12"),
+        database=os.environ.get("DB_NAME", "pcle_db")
     )
+
+#def get_db_connection():
+#    return mysql.connector.connect(
+#        host=os.environ["DB_HOST"],
+#        user=os.environ["DB_USER"],
+#        password=os.environ["DB_PASSWORD"],
+#        database=os.environ["DB_NAME"],
+#        port=int(os.environ.get("DB_PORT", 3306))
+#    )
 
 
 # Login required
@@ -1055,16 +1055,46 @@ def recommend():
 # -----------------------------
 # Admin Login
 # -----------------------------
+#@app.route('/admin_login', methods=['GET', 'POST'])
+#def admin_login():
+#    if request.method == 'POST':
+#        username = request.form['username']
+#        password = request.form['password']
+
+        # Hardcoded admin credentials for now
+#        if username == "admin" and password == "admin123":
+        #if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+#            session['admin_logged_in'] = True
+#            flash("Admin login successful!", "success")
+#            return redirect(url_for('admin_home'))
+#        else:
+#            flash("Invalid admin username or password.", "error")
+#            return redirect(url_for('admin_login'))
+
+#    return render_template('admin_login.html')
+
 @app.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
 
-        # Hardcoded admin credentials for now
-        if username == "admin" and password == "admin123":
-        #if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM admin WHERE username = %s", (username,))
+        admin = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if admin and admin['password'] == password:
+            session.clear()
             session['admin_logged_in'] = True
+            session['admin_id'] = admin['admin_id']
+            session['admin_username'] = admin['username']
+            session['admin_email'] = admin['email']
+
             flash("Admin login successful!", "success")
             return redirect(url_for('admin_home'))
         else:
