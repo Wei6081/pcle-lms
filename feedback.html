@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PCLE Feedback</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='feedback.css') }}">
+</head>
+<body>
+
+  <!-- HEADER -->
+   <div class="layout">
+
+  <!-- SIDEBAR (ONLY SHOW AFTER LOGIN) -->
+  {% if session.get('user_id') %}
+  <aside class="sidebar">
+    <h3>👤 {{ session.get('user_name') }}</h3>
+    <p>Style: {{ session.get('learning_style_full', 'Not set') }}</p>
+
+    <ul class="progress">
+  <li class="{{ 'done' if session.get('subject_done') else '' }}">Step 1: Subject</li>
+  <li class="{{ 'done' if session.get('preassessment_done') else '' }}">Step 2: Pre-Assessment</li>
+  <li class="{{ 'done' if session.get('style_done') else '' }}">Step 3: Learning Style</li>
+  <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Modules</li>
+  <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
+  <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
+</ul>
+  </aside>
+  {% endif %}
+
+  <div class="main-content">
+
+  <header>
+    <div class="logo">🎓 PCLE LMS</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('home') }}">Home</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="container">
+  <h2>Module Feedback</h2>
+
+  <form id="FeedbackForm">
+    
+    <input type="hidden" id="module_name" value="{{ module_name }}">
+
+    <!-- Question 1 -->
+    <div class="question">
+      <label>1. How do you find this module helpful?</label>
+      <div class="rating-options" id="q1Options">
+        <span data-value="1">1<br><small>Very Unhelpful</small></span>
+        <span data-value="2">2<br><small>Slightly Unhelpful</small></span>
+        <span data-value="3">3<br><small>Neither</small></span>
+        <span data-value="4">4<br><small>Slightly Helpful</small></span>
+        <span data-value="5">5<br><small>Very Helpful</small></span>
+      </div>
+    </div>
+
+    <!-- Question 2 -->
+    <div class="question">
+      <label>2. How likely would you recommend this module to your friends?</label>
+      <div class="rating-options" id="q2Options">
+        <span data-value="1">1<br><small>Very Unlikely</small></span>
+        <span data-value="2">2<br><small>Unlikely</small></span>
+        <span data-value="3">3<br><small>Neither</small></span>
+        <span data-value="4">4<br><small>Likely</small></span>
+        <span data-value="5">5<br><small>Very Likely</small></span>
+      </div>
+    </div>
+
+    <!-- Comment -->
+    <div class="question">
+      <label>3. Any comments or feedback to improve this module?</label>
+      <textarea id="comment" rows="4" placeholder="Write your feedback here..."></textarea>
+    </div>
+
+    <button type="submit" class="btn">Submit Feedback</button>
+    <div id="feedbackMessage" class="feedback"></div>
+  </form>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2026 PCLE LMS. All rights reserved. For research use only.</p>
+  </footer>
+
+  </div>
+</div>
+
+  <script src="{{ url_for('static', filename='feedback.js') }}"></script>
+</body>
+</html>

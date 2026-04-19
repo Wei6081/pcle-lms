@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - PCLE LMS</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin_home.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+</head>
+
+<body>
+
+<div class="page-container">
+
+  <header>
+    <div class="logo">🎓 PCLE LMS - Admin</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="admin-layout">
+
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_add_module') }}">Add Module</a>
+      <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
+      <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-panel">
+
+        <h1>Admin Analytics Dashboard</h1>
+        <p class="dashboard-subtitle">
+          This dashboard summarises student performance, learning-style preference, and recommendation trends.
+        </p>
+
+        <button onclick="downloadDashboard()" class="download-btn">
+          Download Report
+        </button>
+
+        <!-- TOP INFO STRIP -->
+      <div class="dashboard-top-row">
+        <div class="stat-box">
+          <span class="stat-label">Total Students</span>
+          <strong class="stat-value">{{ total_students }}</strong>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-label">Total Modules</span>
+          <strong class="stat-value">{{ total_modules }}</strong>
+        </div>
+
+        <div class="highlight-box">
+          <span class="highlight-label">Top Recommended Module</span>
+          <strong class="highlight-value">{{ top_recommended_module }}</strong>
+          <p>Most frequently recommended by the system.</p>
+        </div>
+      </div>
+
+      <!-- PERFORMANCE CARDS -->
+      <div class="cards performance-cards">
+        <div class="card">
+          <h3>Avg Pre Score</h3>
+          <p>{{ performance.avg_pre|round(2) }} / 5</p>
+          <small>{{ performance.avg_pre_pct|round(1) }}%</small>
+        </div>
+
+        <div class="card">
+          <h3>Avg Final Score</h3>
+          <p>{{ performance.avg_final|round(2) }} / 5</p>
+          <small>{{ performance.avg_final_pct|round(1) }}%</small>
+        </div>
+
+        <div class="card">
+          <h3>Avg Improvement</h3>
+          <p class="
+            {% if performance.avg_improvement > 0 %}
+              positive
+            {% elif performance.avg_improvement < 0 %}
+              negative
+            {% else %}
+              neutral
+            {% endif %}
+          ">
+            {{ "{:+.2f}".format(performance.avg_improvement) }}
+          </p>
+          <small>{{ performance.avg_improvement_pct|round(1) }}%</small>
+        </div>
+      </div>
+
+      <!-- SUMMARY / FEEDBACK -->
+      <div class="insight-box">
+        <h3>Dashboard Summary</h3>
+        <ul>
+          {% for point in summary_points %}
+            <li>{{ point }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="charts">
+      <div class="chart-container">
+        <h3>Final Assessment Score Distribution</h3>
+        <p class="chart-note">Shows how many students are in the Low, Medium, and High performance groups.</p>
+        <canvas id="scoreChart"></canvas>
+      </div>
+
+      <div class="chart-container">
+        <h3>Learning Style Distribution</h3>
+        <p class="chart-note">Shows the percentage of students in each dominant learning style.</p>
+        <canvas id="styleChart"></canvas>
+      </div>
+
+      <div class="chart-container recommendation-chart">
+        <h3>Top Recommended Modules</h3>
+        <p class="chart-note">Shows the 5 modules most frequently recommended by the system.</p>
+        <canvas id="recChart"></canvas>
+      </div>
+    </div>
+
+    </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 PCLE LMS - Admin Panel</p>
+  </footer>
+
+</div>
+
+<script id="score-data" type="application/json">
+  {{ score_distribution | tojson }}
+</script>
+
+<script id="style-data" type="application/json">
+  {{ learning_styles | tojson }}
+</script>
+
+<script id="rec-data" type="application/json">
+  {{ recommendations | tojson }}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const score_distribution = JSON.parse(document.getElementById("score-data").textContent);
+    const learning_styles = JSON.parse(document.getElementById("style-data").textContent);
+    const recommendations = JSON.parse(document.getElementById("rec-data").textContent);
+
+    Chart.register(ChartDataLabels);
+
+    // SCORE DISTRIBUTION
+    const scoreOrder = ['Low', 'Medium', 'High'];
+    const scoreMap = {};
+    score_distribution.forEach(item => {
+        scoreMap[item.category] = item.count;
+    });
+
+    const scoreLabels = scoreOrder.filter(label => scoreMap[label] !== undefined);
+    const scoreData = scoreLabels.map(label => scoreMap[label]);
+    const totalScores = scoreData.reduce((a, b) => a + b, 0);
+
+    new Chart(document.getElementById('scoreChart'), {
+        type: 'bar',
+        data: {
+            labels: scoreLabels,
+            datasets: [{
+                label: 'Students',
+                data: scoreData,
+                backgroundColor: 'rgba(59, 130, 246, 0.55)',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const pct = totalScores ? ((value / totalScores) * 100).toFixed(1) : 0;
+                            return `${value} students (${pct}%)`;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#0f172a',
+                    anchor: 'end',
+                    align: 'top',
+                    font: { weight: 'bold', size: 12 },
+                    formatter: function(value) {
+                        const pct = totalScores ? ((value / totalScores) * 100).toFixed(1) : 0;
+                        return `${value} (${pct}%)`;
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Performance Category'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 },
+                    title: {
+                        display: true,
+                        text: 'Number of Students'
+                    }
+                }
+            }
+        }
+    });
+
+    // LEARNING STYLE
+    const styleLabels = learning_styles.map(x => x.learning_style);
+    const styleData = learning_styles.map(x => x.count);
+    const totalStyles = styleData.reduce((a, b) => a + b, 0);
+
+    new Chart(document.getElementById('styleChart'), {
+        type: 'pie',
+        data: {
+            labels: styleLabels,
+            datasets: [{
+                data: styleData
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { size: 13 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const pct = totalStyles ? ((value / totalStyles) * 100).toFixed(1) : 0;
+                            return `${context.label}: ${value} students (${pct}%)`;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#ffffff',
+                    font: { weight: 'bold', size: 12 },
+                    formatter: function(value) {
+                        const pct = totalStyles ? ((value / totalStyles) * 100).toFixed(1) : 0;
+                        return `${pct}%`;
+                    }
+                }
+            }
+        }
+    });
+
+    // RECOMMENDATIONS
+    const sortedRecommendations = [...recommendations].sort((a, b) => b.rec_count - a.rec_count);
+    const recLabels = sortedRecommendations.map(x => x.module_name);
+    const recData = sortedRecommendations.map(x => x.rec_count);
+    const totalRecs = recData.reduce((a, b) => a + b, 0);
+
+    new Chart(document.getElementById('recChart'), {
+        type: 'bar',
+        data: {
+            labels: recLabels,
+            datasets: [{
+                label: 'Recommendation Count',
+                data: recData,
+                backgroundColor: 'rgba(37, 99, 235, 0.55)',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const pct = totalRecs ? ((value / totalRecs) * 100).toFixed(1) : 0;
+                            return `${value} recommendations (${pct}%)`;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#0f172a',
+                    anchor: 'end',
+                    align: 'right',
+                    font: { weight: 'bold', size: 12 },
+                    formatter: function(value) {
+                        return value;
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 },
+                    title: {
+                        display: true,
+                        text: 'Recommendation Count'
+                    }
+                },
+                y: {
+                    ticks: {
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+function downloadDashboard() {
+    const target = document.querySelector(".admin-panel");
+
+    html2canvas(target, { scale: 2 }).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "PCLE-dashboard.png";
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+}
+</script>
+
+
+</body>
+</html>

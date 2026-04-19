@@ -1,0 +1,76 @@
+body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #dbeafe, #eff6ff);
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .portal-container {
+      max-width: 900px;
+      margin: 80px auto;
+      padding: 40px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .portal-container h1 {
+      color: #1e3a8a;
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+    }
+
+    .portal-container p {
+      color: #475569;
+      font-size: 1.05rem;
+      margin-bottom: 35px;
+    }
+
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .portal-card {
+      background: #f8fafc;
+      border: 1px solid #dbeafe;
+      border-radius: 16px;
+      padding: 30px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .portal-card h2 {
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+
+    .portal-card p {
+      color: #64748b;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+
+    .portal-btn {
+      display: inline-block;
+      padding: 12px 22px;
+      background: #1e3a8a;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .portal-btn:hover {
+      background: #2563eb;
+    }
+
+    .admin-btn {
+      background: #0f172a;
+    }
+
+    .admin-btn:hover {
+      background: #1e293b;
+    }
