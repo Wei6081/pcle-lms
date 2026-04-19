@@ -1623,8 +1623,16 @@ def edit_material(material_id):
         k_case=k_case
     )
 
+# run for local
+#if __name__ == '__main__':
+#    app.run(debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true')
+
+# run for railway
 if __name__ == '__main__':
-    app.run(debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true')
-
-
+    port = int(os.environ.get("PORT", 5000))
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    )
 
