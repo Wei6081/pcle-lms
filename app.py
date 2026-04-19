@@ -121,10 +121,18 @@ STYLE_MAP = {
 }
 
 # --- Page Routes ---
+#@app.route('/')
+#def home():
+#    sync_progress_flags()
+#    return render_template('home.html')
+
 @app.route('/')
 def home():
-    sync_progress_flags()
-    return render_template('home.html')
+    return "PCLE LMS is running"
+
+@app.route('/health')
+def health():
+    return "OK", 200
 
 # LOGIN PAGE
 @app.route('/login', methods=['GET', 'POST'])
