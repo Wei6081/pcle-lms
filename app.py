@@ -3,6 +3,8 @@ import json
 import os
 import re
 import secrets
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -24,9 +26,43 @@ STYLE_MAP = {
 }
 
 def send_reset_email(to_email, reset_link):
-    # Demo/project version:
-    # no real email sending, just return the reset link
-    return True, reset_link
+    try:
+        smtp_user = "adminpcle@gmail.com"
+        smtp_pass = os.environ.get("MAIL_PASSWORD")
+
+        if not smtp_pass:
+            return False, "MAIL_PASSWORD is missing."
+
+        msg = EmailMessage()
+        msg["Subject"] = "PCLE LMS Password Reset"
+        msg["From"] = smtp_user
+        msg["To"] = to_email
+        msg.set_content(f"""Hello,
+
+We received a request to reset your password for PCLE LMS.
+
+Please click the link below to reset your password:
+{reset_link}
+
+This link will expire in 15 minutes and can only be used once.
+
+If you did not request this, you can ignore this email.
+
+Regards,
+PCLE LMS
+""")
+
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+        server.quit()
+
+        return True, None
+
+    except Exception as e:
+        print("EMAIL ERROR:", str(e))
+        return False, str(e)
 
 
 def cleanup_old_reset_tokens():
@@ -313,75 +349,85 @@ def login():
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
-    cleanup_old_reset_tokens()
+    try:
+        cleanup_old_reset_tokens()
 
-    if request.method == 'POST':
-        email = request.form['email'].strip()
+        if request.method == 'POST':
+            email = request.form['email'].strip()
 
-        if not email:
-            flash("Please enter your email.", "error")
-            return redirect(url_for('forgot_password'))
+            if not email:
+                flash("Please enter your email.", "error")
+                return redirect(url_for('forgot_password'))
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, email FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT id, email FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
 
-        if not user:
+            if not user:
+                cursor.close()
+                conn.close()
+                flash("No account found with that email.", "error")
+                return redirect(url_for('forgot_password'))
+
+            cursor.close()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                UPDATE password_reset_tokens
+                SET used = 1
+                WHERE user_id = %s AND used = 0
+            """, (user['id'],))
+
+            token = secrets.token_urlsafe(32)
+            expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+            cursor.execute("""
+                INSERT INTO password_reset_tokens (user_id, token, expires_at, used)
+                VALUES (%s, %s, %s, 0)
+            """, (user['id'], token, expires_at))
+
+            conn.commit()
             cursor.close()
             conn.close()
-            flash("No account found with that email.", "error")
-            return redirect(url_for('forgot_password'))
 
-        cursor.close()
-        cursor = conn.cursor()
+            reset_link = url_for('reset_password', token=token, _external=True)
 
-        cursor.execute("""
-            UPDATE password_reset_tokens
-            SET used = 1
-            WHERE user_id = %s AND used = 0
-        """, (user['id'],))
+            mail_sent, mail_error = send_reset_email(user['email'], reset_link)
 
-        token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(minutes=15)
+            print("MAIL SENT:", mail_sent)
+            print("MAIL ERROR:", mail_error)
+            print("RESET LINK:", reset_link)
 
-        cursor.execute("""
-            INSERT INTO password_reset_tokens (user_id, token, expires_at, used)
-            VALUES (%s, %s, %s, 0)
-        """, (user['id'], token, expires_at))
+            if mail_sent:
+                flash("A password reset link has been sent to your email.", "success")
+                return render_template(
+                    'forgot_password.html',
+                    email_sent=True,
+                    mail_error=None
+                )
 
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        reset_link = url_for('reset_password', token=token, _external=True)
-
-        # no real email sending
-        mail_sent, generated_link = send_reset_email(user['email'], reset_link)
-
-        if mail_sent:
-            flash("Password reset link generated successfully.", "success")
+            flash("Unable to send email. Please try again later.", "error")
             return render_template(
                 'forgot_password.html',
-                email_sent=True,
-                mail_error=None,
-                reset_link=generated_link
+                email_sent=False,
+                mail_error=mail_error
             )
 
-        flash("Unable to generate reset link.", "error")
         return render_template(
             'forgot_password.html',
             email_sent=False,
-            mail_error="Unable to generate reset link.",
-            reset_link=None
+            mail_error=None
         )
 
-    return render_template(
-        'forgot_password.html',
-        email_sent=False,
-        mail_error=None,
-        reset_link=None
-    )
+    except Exception as e:
+        print("FORGOT PASSWORD ROUTE ERROR:", str(e))
+        flash(f"System error: {str(e)}", "error")
+        return render_template(
+            'forgot_password.html',
+            email_sent=False,
+            mail_error=str(e)
+        ), 500
 
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
@@ -469,6 +515,7 @@ def reset_password(token):
     conn.close()
 
     return render_template('reset_password.html', email=email, token=token)
+
 
 @app.route('/logout')
 def logout():
