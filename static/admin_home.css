@@ -22,7 +22,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+  background: #1e3a8a;
   color: #fff;
   padding: 1rem 2rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
@@ -62,7 +62,7 @@ header nav ul li a:hover {
 /* ========== SIDEBAR ========== */
 .sidebar {
   width: 240px;
-  background: #0f172a;
+  background: #1e3a8a;
   color: #fff;
   padding: 1.5rem 1rem;
   box-shadow: 2px 0 12px rgba(0,0,0,0.08);
@@ -323,7 +323,7 @@ footer {
   margin-top: auto;
   text-align: center;
   padding: 1rem;
-  background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+  background: #1e3a8a;
   color: #fff;
   font-weight: 500;
 }

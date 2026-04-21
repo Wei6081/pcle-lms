@@ -1,7 +1,6 @@
 let q1Rating = 0;
 let q2Rating = 0;
 
-// Function to make rating boxes clickable
 function setupRating(questionId) {
   const spans = document.querySelectorAll(`#${questionId} span`);
   spans.forEach(span => {
@@ -17,14 +16,20 @@ function setupRating(questionId) {
 setupRating('q1Options');
 setupRating('q2Options');
 
-// Submit feedback
 document.getElementById('FeedbackForm').addEventListener('submit', function(e) {
   e.preventDefault();
 
   const comment = document.getElementById('comment').value.trim();
+  const messageEl = document.getElementById('feedbackMessage');
 
   if (!q1Rating || !q2Rating) {
     alert("Please select a rating for both questions.");
+    return;
+  }
+
+  if (!comment) {
+    messageEl.textContent = "Please write a comment before submitting.";
+    messageEl.style.color = "red";
     return;
   }
 
@@ -37,7 +42,6 @@ document.getElementById('FeedbackForm').addEventListener('submit', function(e) {
     comments: comment
   };
 
-  // Send to Flask backend
   fetch('/save_feedback', {
     method: 'POST',
     headers: {
@@ -47,52 +51,20 @@ document.getElementById('FeedbackForm').addEventListener('submit', function(e) {
   })
   .then(response => response.json())
   .then(data => {
-    console.log(data.message);
+    if (data.message !== "Feedback saved!") {
+      throw new Error(data.message || "Unable to save feedback");
+    }
 
-    // Show thank-you message
-    const messageEl = document.getElementById('feedbackMessage');
     messageEl.textContent = "Thank you for your feedback!";
     messageEl.style.color = "green";
 
-    // Redirect
     setTimeout(() => {
       window.location.href = "/recommended_module";
     }, 1500);
   })
   .catch(error => {
+    messageEl.textContent = error.message || "Error saving feedback.";
+    messageEl.style.color = "red";
     console.error('Error saving feedback:', error);
   });
 });
-//document.getElementById('FeedbackForm').addEventListener('submit', function(e) {
-//  e.preventDefault();
-//  const comment = document.getElementById('comment').value.trim();
-
-//  if (!q1Rating || !q2Rating) {
-//    alert("Please select a rating for both questions.");
-//    return;
-//  }
-
-//  const feedback = { q1Rating, q2Rating, comment };
-
-  // Save to localStorage (replace with backend/database later)
-//  const moduleId = 'module123';
-//  let feedbackList = JSON.parse(localStorage.getItem(`feedback_${moduleId}`)) || [];
-// feedbackList.push(feedback);
-//  localStorage.setItem(`feedback_${moduleId}`, JSON.stringify(feedbackList));
-
-  // Show thank-you message
-//  const messageEl = document.getElementById('feedbackMessage');
-//  messageEl.textContent = "Thank you for your feedback!";
-//  messageEl.style.color = "green";
-
-  // Reset selections
-//  q1Rating = 0;
-//  q2Rating = 0;
-//  document.querySelectorAll('.rating-options span').forEach(s => s.classList.remove('selected'));
-//  document.getElementById('comment').value = "";
-
-  // Redirect to Recommended Module page after 1.5 seconds
-//  setTimeout(() => {
-//    window.location.href = "/recommended_module"; // or use Flask url_for if rendered dynamically
-//  }, 3000);
-//});

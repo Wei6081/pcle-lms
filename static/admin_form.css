@@ -21,7 +21,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+  background: #1e3a8a;
   color: #fff;
   padding: 1rem 2rem;
 }
@@ -52,7 +52,7 @@ header nav a {
 
 .sidebar {
   width: 240px;
-  background: #0f172a;
+  background: #1e3a8a;
   color: #fff;
   padding: 1.5rem 1rem;
 }
@@ -210,7 +210,7 @@ footer {
   margin-top: auto;
   text-align: center;
   padding: 1rem;
-  background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+  background: #1e3a8a;
   color: #fff;
 }
 

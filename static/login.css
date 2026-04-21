@@ -174,3 +174,13 @@ input[type="password"]:focus {
     padding: 30px 20px;
   }
 }
+
+.forgot-link {
+  color: #1abc9c;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
