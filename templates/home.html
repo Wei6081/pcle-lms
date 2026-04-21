@@ -28,11 +28,10 @@
         <div class="logo">🎓 PCLE LMS</div>
         <nav>
           <ul>
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ url_for('admin_login') }}">Admin Portal</a></li>
             {% if session.get('user_id') %}
               <li><a href="{{ url_for('logout') }}">Logout</a></li>
             {% else %}
+              <li><a href="{{ url_for('admin_login') }}">Admin Portal</a></li>
               <li><a href="{{ url_for('login') }}">Login</a></li>
             {% endif %}
           </ul>

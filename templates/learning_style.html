@@ -7,136 +7,186 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='learning_style.css') }}">
 </head>
 <body>
-  <!-- HEADER -->
   <div class="layout">
 
-  <!-- SIDEBAR (ONLY SHOW AFTER LOGIN) -->
-  {% if session.get('user_id') %}
-  <aside class="sidebar">
-    <h3>👤 {{ session.get('user_name') }}</h3>
-    <p>Style: {{ session.get('learning_style_full', 'Not set') }}</p>
+    {% if session.get('user_id') %}
+    <aside class="sidebar">
+      <h3>👤 {{ session.get('user_name') }}</h3>
+      <p>Style: {{ session.get('learning_style_full', 'Not set') }}</p>
 
-    <ul class="progress">
-  <li class="{{ 'done' if session.get('subject_done') else '' }}">Step 1: Subject</li>
-  <li class="{{ 'done' if session.get('preassessment_done') else '' }}">Step 2: Pre-Assessment</li>
-  <li class="{{ 'done' if session.get('style_done') else '' }}">Step 3: Learning Style</li>
-  <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Modules</li>
-  <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
-  <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
-</ul>
-  </aside>
-  {% endif %}
-
-  <div class="main-content">
-
-  <header>
-    <div class="logo">🎓 PCLE LMS</div>
-    <nav>
-      <ul>
-        <li><a href="{{ url_for('home') }}">Home</a></li>
-        <!--<li><a href="/pre_assessment">Pre-Assessment</a></li>
-        <li><a href="/modules">Learning Modules</a></li>
-        <li><a href="/results">Results</a></li>
-        <li><a href="/profile">Profile</a></li>-->
+      <ul class="progress">
+        <li class="{{ 'done' if session.get('subject_done') else '' }}">Step 1: Subject</li>
+        <li class="{{ 'done' if session.get('preassessment_done') else '' }}">Step 2: Pre-Assessment</li>
+        <li class="{{ 'done' if session.get('style_done') else '' }}">Step 3: Learning Style</li>
+        <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Modules</li>
+        <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
+        <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
       </ul>
-    </nav>
-  </header>
+    </aside>
+    {% endif %}
 
-  <div class="container">
-    <!--<h1>🎓 Personalised & Collaborative Learning Experience (PCLE)</h1>-->
-    <h2>Learning Style Assessment</h2>
+    <div class="main-content">
 
-    <div class="option-box">
-      <p>Select how you want to identify your learning style:</p>
-      <button id="takeQuizBtn" class="btn">Take VARK Questionnaire</button>
-      <button id="chooseStyleBtn" class="btn">I Already Know My Learning Style</button>
+      <header>
+        <div class="logo">🎓 PCLE LMS</div>
+        <nav>
+          <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <div class="container">
+        <h2>Learning Style Assessment</h2>
+
+        {% if locked %}
+          <div class="result-box" style="display:block;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">{{ saved_icon }}</div>
+            <h3 style="margin-bottom: 10px;">Your Learning Style Result</h3>
+            <h2 style="margin-top: 0; margin-bottom: 15px;">{{ saved_style_full }} Learner</h2>
+
+            <p style="margin-bottom: 12px;">
+              {{ saved_description }}
+            </p>
+
+            <p style="margin-bottom: 18px;">
+              <strong>Preferred content format:</strong> {{ preferred_content }}
+            </p>
+
+            <p style="margin-bottom: 20px; color: #475569;">
+              This result has already been recorded and this step is now locked.
+            </p>
+
+            <a href="{{ url_for('content') }}" class="btn">Continue to Learning Content</a>
+          </div>
+
+        {% else %}
+          <div class="option-box">
+            <p>Select how you would like to identify your learning style:</p>
+            <button id="takeQuizBtn" class="btn" type="button">Take VARK-Based Questionnaire</button>
+            <button id="chooseStyleBtn" class="btn" type="button">I Already Know My Learning Style</button>
+          </div>
+
+          <form id="varkForm" class="hidden">
+            <h3>VARK-Based Learning Style Questionnaire</h3>
+            <p style="margin-bottom: 20px; text-align: center;">
+              Please answer the following questions based on how you usually prefer to learn.
+            </p>
+
+            <div class="question">
+              <label>1. What type of learning material helps you understand a new topic best?</label>
+              <select name="q1" required>
+                <option value="">Select...</option>
+                <option value="Visual">Diagrams, charts, images, or videos</option>
+                <option value="Auditory">Spoken explanations, lectures, or podcasts</option>
+                <option value="Reading/Writing">Notes, articles, or textbooks</option>
+                <option value="Kinesthetic">Practice, activities, or hands-on tasks</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label>2. When revising for a test, which method helps you remember information best?</label>
+              <select name="q2" required>
+                <option value="">Select...</option>
+                <option value="Visual">Looking at mind maps, diagrams, or highlighted notes</option>
+                <option value="Auditory">Listening to explanations or discussing with others</option>
+                <option value="Reading/Writing">Reading notes and rewriting key points</option>
+                <option value="Kinesthetic">Doing practice questions or examples</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label>3. When learning a new concept, how do you prefer it to be explained?</label>
+              <select name="q3" required>
+                <option value="">Select...</option>
+                <option value="Visual">With slides, diagrams, or visual examples</option>
+                <option value="Auditory">Through spoken explanation and discussion</option>
+                <option value="Reading/Writing">Through written notes or text explanation</option>
+                <option value="Kinesthetic">By trying it out through practice</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label>4. When you receive instructions for an assignment, which method do you prefer?</label>
+              <select name="q4" required>
+                <option value="">Select...</option>
+                <option value="Visual">Pictures, flowcharts, or demonstrations</option>
+                <option value="Auditory">A teacher explaining the instructions aloud</option>
+                <option value="Reading/Writing">Written instructions with details</option>
+                <option value="Kinesthetic">Trying the task while learning the instructions</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label>5. Which activity do you enjoy most in a learning environment?</label>
+              <select name="q5" required>
+                <option value="">Select...</option>
+                <option value="Visual">Watching videos or visual presentations</option>
+                <option value="Auditory">Listening to discussions or explanations</option>
+                <option value="Reading/Writing">Reading materials or making notes</option>
+                <option value="Kinesthetic">Doing activities, role-play, or practical tasks</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label>6. If you are using a new system or software for the first time, how would you prefer to learn it?</label>
+              <select name="q6" required>
+                <option value="">Select...</option>
+                <option value="Visual">By looking at screenshots, diagrams, or video demonstrations</option>
+                <option value="Auditory">By listening to someone explain the steps</option>
+                <option value="Reading/Writing">By reading the user guide or written instructions</option>
+                <option value="Kinesthetic">By exploring and trying the system myself</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label>7. During group work, what approach feels most natural to you when learning something new?</label>
+              <select name="q7" required>
+                <option value="">Select...</option>
+                <option value="Visual">Organising ideas using charts, slides, or sketches</option>
+                <option value="Auditory">Discussing ideas and listening to team members</option>
+                <option value="Reading/Writing">Writing notes, summaries, or detailed plans</option>
+                <option value="Kinesthetic">Taking action and learning through doing the task</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label>8. If you do not understand a topic the first time, what would help you most?</label>
+              <select name="q8" required>
+                <option value="">Select...</option>
+                <option value="Visual">Seeing another diagram, chart, or video example</option>
+                <option value="Auditory">Hearing the explanation again</option>
+                <option value="Reading/Writing">Reading another explanation or example</option>
+                <option value="Kinesthetic">Trying a practical example myself</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn">Submit Questionnaire</button>
+          </form>
+
+          <div id="selectStyle" class="hidden">
+            <h3>Select Your Learning Style</h3>
+            <select id="styleDropdown">
+              <option value="">Select your learning style...</option>
+              <option value="Visual">Visual 👁️</option>
+              <option value="Auditory">Auditory 🎧</option>
+              <option value="Reading/Writing">Reading/Writing 📘</option>
+              <option value="Kinesthetic">Kinesthetic 🛠️</option>
+            </select>
+            <button id="submitStyle" class="btn" type="button">Confirm Selection</button>
+          </div>
+
+          <div id="result" class="result-box"></div>
+        {% endif %}
+      </div>
+
+      <footer>
+        <p>© 2026 PCLE LMS. All rights reserved. For research use only.</p>
+      </footer>
+
     </div>
-
-    <!-- QUIZ SECTION -->
-    <form id="varkForm" class="hidden">
-      <h3>VARK Learning Style Questionnaire</h3>
-
-      <div class="question">
-        <label>1. What type of content helps you learn best?</label>
-        <select name="q1" required>
-          <option value="">Select...</option>
-          <option value="Visual">Visual (videos, charts, images)</option>
-          <option value="Auditory">Auditory (lectures, podcasts)</option>
-          <option value="Reading/Writing">Reading/Writing (books, articles, notes)</option>
-          <option value="Kinesthetic">Kinesthetic (hands-on tasks, interactive exercises)</option>
-        </select>
-      </div>
-
-      <div class="question">
-        <label>2. When you are studying, which helps you remember information better?</label>
-        <select name="q2" required>
-          <option value="">Select...</option>
-          <option value="Visual">Seeing diagrams, pictures, or infographics</option>
-          <option value="Auditory">Listening to lectures or audio recordings</option>
-          <option value="Reading/Writing">Reading textbooks or writing notes</option>
-          <option value="Kinesthetic">Engaging in physical activities or simulations</option>
-        </select>
-      </div>
-
-      <div class="question">
-        <label>3. How do you prefer to learn new concepts?</label>
-        <select name="q3" required>
-          <option value="">Select...</option>
-          <option value="Visual">Through visuals like diagrams, videos, and presentations</option>
-          <option value="Auditory">By listening to explanations or discussions</option>
-          <option value="Reading/Writing">By reading articles, textbooks, or taking written notes</option>
-          <option value="Kinesthetic">By doing practical activities and exercises</option>
-        </select>
-      </div>
-
-      <div class="question">
-        <label>4. When given instructions, which method do you prefer?</label>
-        <select name="q4" required>
-          <option value="">Select...</option>
-          <option value="Visual">I like to see pictures or diagrams alongside explanations</option>
-          <option value="Auditory">I prefer listening to someone explain the instructions</option>
-          <option value="Reading/Writing">I prefer reading written instructions</option>
-          <option value="Kinesthetic">I like to practice the task as I learn it</option>
-        </select>
-      </div>
-
-      <div class="question">
-        <label>5. Which of the following do you enjoy most in a learning environment?</label>
-        <select name="q5" required>
-          <option value="">Select...</option>
-          <option value="Visual">Watching videos or presentations</option>
-          <option value="Auditory">Listening to group discussions or podcasts</option>
-          <option value="Reading/Writing">Reading articles, books, or detailed guides</option>
-          <option value="Kinesthetic">Engaging in hands-on activities or role-playing</option>
-        </select>
-      </div>
-
-      <button type="submit" class="btn">Submit Questionnaire</button>
-    </form>
-
-    <!-- DIRECT SELECTION SECTION -->
-    <div id="selectStyle" class="hidden">
-      <h3>Select Your Learning Style</h3>
-      <select id="styleDropdown">
-        <option value="">Select your learning style...</option>
-        <option value="Visual">Visual</option>
-        <option value="Auditory">Auditory</option>
-        <option value="Reading/Writing">Reading/Writing</option>
-        <option value="Kinesthetic">Kinesthetic</option>
-      </select>
-      <button id="submitStyle" class="btn">Confirm Selection</button>
-    </div>
-
-    <div id="result" class="result-box"></div>
   </div>
 
-  <footer>
-    <p>© 2026 PCLE LMS. All rights reserved. For research use only.</p>
-  </footer>
-
-  </div>
-</div>
-
-<script src="{{ url_for('static', filename='learning_style.js') }}"></script>
+  <script src="{{ url_for('static', filename='learning_style.js') }}"></script>
 </body>
 </html>

@@ -2,81 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PCLE LMS - Results</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='subject.css') }}">
 </head>
 <body>
-  <!-- HEADER -->
-   <div class="layout">
+<div class="layout">
 
-  <!-- SIDEBAR (ONLY SHOW AFTER LOGIN) -->
   {% if session.get('user_id') %}
   <aside class="sidebar">
     <h3>👤 {{ session.get('user_name') }}</h3>
     <p>Style: {{ session.get('learning_style_full', 'Not set') }}</p>
-
     <ul class="progress">
-  <li class="{{ 'done' if session.get('subject_done') else '' }}">Step 1: Subject</li>
-  <li class="{{ 'done' if session.get('preassessment_done') else '' }}">Step 2: Pre-Assessment</li>
-  <li class="{{ 'done' if session.get('style_done') else '' }}">Step 3: Learning Style</li>
-  <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Modules</li>
-  <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
-  <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
-</ul>
+      <li class="{{ 'done' if session.get('subject_done') else '' }}">Step 1: Subject</li>
+      <li class="{{ 'done' if session.get('preassessment_done') else '' }}">Step 2: Pre-Assessment</li>
+      <li class="{{ 'done' if session.get('style_done') else '' }}">Step 3: Learning Style</li>
+      <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Modules</li>
+      <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
+      <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
+    </ul>
   </aside>
   {% endif %}
 
   <div class="main-content">
-    
-  <header>
-    <div class="logo">🎓 PCLE LMS</div>
-    <nav>
-      <ul>
-        <li><a href="{{ url_for('home') }}">Home</a></li>
-        <li><a href="{{ url_for('logout') }}">Logout</a></li>
-      </ul>
-    </nav>
-  </header>
+    <header>
+      <div class="logo">🎓 PCLE LMS</div>
+      <nav>
+        <ul>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+      </nav>
+    </header>
 
-  <!-- HERO SECTION -->
-  <section class="hero">
-    <h1>Your Assessment Results</h1>
-    <p>Check your Pre-Assessment and Final Assessment performance.</p>
-  </section>
+    <section class="hero">
+      <h1>Your Assessment Results</h1>
+      <p>Module: {{ module_name }}</p>
+    </section>
 
-  <!-- RESULTS CARDS -->
-  <section class="quick-access">
-    <!-- Pre-Assessment Result -->
-    <div class="card">
-      <span class="status">Completed</span>
-      <h3>Pre-Assessment</h3>
-      <p>Score: {{ pre_score }} / {{ pre_total }}</p>
-    </div>
-
-    <!-- Final Assessment Result -->
-    <div class="card">
-      <span class="status">Completed</span>
-      <h3>Final Assessment</h3>
-      <p>Score: {{ final_score }} / {{ final_total }}</p>
-    </div>
-
-    <!-- Feedback Link Card -->
-    <div class="card">
-      <span class="status">Feedback</span>
-      <h3>Rate Your Learning Experience</h3>
-      <p>Please provide your feedback to help improve the system</p>
-      <div class="card-action">
-        <a href="{{ url_for('feedback') }}" class="btn-small">Go to Feedback</a>
+    <section class="quick-access">
+      <div class="card">
+        <span class="status">Completed</span>
+        <h3>Pre-Assessment</h3>
+        <p>Score: {{ pre_score }} / 5</p>
       </div>
-    </div>
-  </section>
 
-  <!-- FOOTER -->
-  <footer>
-    <p>© 2026 PCLE LMS. All rights reserved. For research use only.</p>
-  </footer>
+      <div class="card">
+        <span class="status">Completed</span>
+        <h3>Final Assessment</h3>
+        <p>Score: {{ final_score }} / 5</p>
+      </div>
 
+      <div class="card">
+        <span class="status">Improvement</span>
+        <h3>Learning Progress</h3>
+        <p>{{ "{:+d}".format(improvement) }}</p>
+      </div>
+
+      <div class="card">
+        <span class="status">Feedback</span>
+        <h3>Rate Your Learning Experience</h3>
+        <p>Please provide your feedback for this module.</p>
+        <div class="card-action">
+          <a href="{{ url_for('feedback') }}" class="btn-small">Go to Feedback</a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>© 2026 PCLE LMS. All rights reserved. For research use only.</p>
+    </footer>
   </div>
 </div>
 </body>

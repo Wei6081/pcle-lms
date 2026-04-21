@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- HEADER -->
   <header>
     <div class="logo">🎓 PCLE LMS</div>
     <nav>
@@ -18,13 +17,9 @@
     </nav>
   </header>
 
-   <!-- LOGIN  -->
   <div class="login-container">
-    
-    <!-- LEFT SIDE IMAGE -->
     <div class="login-image"></div>
 
-    <!-- RIGHT SIDE FORM -->
     <div class="login-form">
       <div class="form-content">
         <h2>Login to PCLE LMS</h2>
@@ -41,20 +36,26 @@
           {% if request.args.get('next') %}
             <input type="hidden" name="next" value="{{ request.args.get('next') }}">
           {% endif %}
+
           <div class="form-group">
             <label for="email">Email</label>
             <input type="text" id="email" name="email" placeholder="Enter your email" required>
           </div>
+
           <div class="form-group">
             <label for="password">Password</label>
             <input type="password" id="password" name="password" placeholder="Enter your password" required>
           </div>
+
+          <div class="form-group" style="text-align: right; margin-top: -8px;">
+            <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot Password?</a>
+          </div>
+
           <button type="submit" class="btn">Login</button>
           <p class="note">Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
         </form>
       </div>
     </div>
-
   </div>
 
 </body>
