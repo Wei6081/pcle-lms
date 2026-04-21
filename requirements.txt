@@ -6,4 +6,3 @@ scikit-learn
 tensorflow
 Werkzeug
 gunicorn
-requests

@@ -3,7 +3,6 @@ import json
 import os
 import re
 import secrets
-import requests
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -25,47 +24,9 @@ STYLE_MAP = {
 }
 
 def send_reset_email(to_email, reset_link):
-    try:
-        api_key = os.environ.get("RESEND_API_KEY")
-        mail_from = os.environ.get("MAIL_FROM", "Acme <onboarding@resend.dev>")
-        app_name = os.environ.get("MAIL_APP_NAME", "PCLE LMS")
-
-        if not api_key:
-            return False, "Resend API key is missing."
-
-        subject = f"{app_name} Password Reset"
-        html_content = f"""
-        <p>Hello,</p>
-        <p>We received a request to reset your password for <strong>{app_name}</strong>.</p>
-        <p>Please click the link below to reset your password:</p>
-        <p><a href="{reset_link}">{reset_link}</a></p>
-        <p>This link will expire in 15 minutes and can only be used once.</p>
-        <p>If you did not request this, you can ignore this email.</p>
-        <p>Regards,<br>{app_name}</p>
-        """
-
-        response = requests.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "from": mail_from,
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content
-            },
-            timeout=15
-        )
-
-        if response.status_code in (200, 201):
-            return True, None
-
-        return False, f"Resend error {response.status_code}: {response.text}"
-
-    except Exception as e:
-        return False, f"Email sending failed: {str(e)}"
+    # Demo/project version:
+    # no real email sending, just return the reset link
+    return True, reset_link
 
 
 def cleanup_old_reset_tokens():
@@ -395,24 +356,32 @@ def forgot_password():
 
         reset_link = url_for('reset_password', token=token, _external=True)
 
-        mail_sent, mail_error = send_reset_email(user['email'], reset_link)
+        # no real email sending
+        mail_sent, generated_link = send_reset_email(user['email'], reset_link)
 
         if mail_sent:
-            flash("A password reset link has been sent to your email.", "success")
+            flash("Password reset link generated successfully.", "success")
             return render_template(
                 'forgot_password.html',
                 email_sent=True,
-                mail_error=None
+                mail_error=None,
+                reset_link=generated_link
             )
 
-        flash("Unable to send email. Please try again later.", "error")
+        flash("Unable to generate reset link.", "error")
         return render_template(
             'forgot_password.html',
             email_sent=False,
-            mail_error=mail_error
+            mail_error="Unable to generate reset link.",
+            reset_link=None
         )
 
-    return render_template('forgot_password.html', email_sent=False, mail_error=None)
+    return render_template(
+        'forgot_password.html',
+        email_sent=False,
+        mail_error=None,
+        reset_link=None
+    )
 
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
