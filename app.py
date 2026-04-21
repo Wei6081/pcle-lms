@@ -26,22 +26,25 @@ STYLE_MAP = {
 }
 
 def send_reset_email(to_email, reset_link):
-    smtp_host = os.environ.get("MAIL_HOST")
-    smtp_port = int(os.environ.get("MAIL_PORT", 587))
-    smtp_user = os.environ.get("MAIL_USERNAME")
-    smtp_pass = os.environ.get("MAIL_PASSWORD")
-    mail_from = os.environ.get("MAIL_FROM", smtp_user)
-    app_name = os.environ.get("MAIL_APP_NAME", "PCLE")
+    try:
+        smtp_host = os.environ.get("MAIL_HOST")
+        smtp_port_raw = os.environ.get("MAIL_PORT", "587")
+        smtp_user = os.environ.get("MAIL_USERNAME")
+        smtp_pass = os.environ.get("MAIL_PASSWORD")
+        mail_from = os.environ.get("MAIL_FROM", smtp_user)
+        app_name = os.environ.get("MAIL_APP_NAME", "PCLE")
 
-    if not smtp_host or not smtp_user or not smtp_pass or not mail_from:
-        return False, "Email settings are not configured."
+        if not smtp_host or not smtp_user or not smtp_pass or not mail_from:
+            return False, "Email settings are not configured."
 
-    msg = EmailMessage()
-    msg["Subject"] = f"{app_name} Password Reset"
-    msg["From"] = mail_from
-    msg["To"] = to_email
-    msg.set_content(
-        f"""Hello,
+        smtp_port = int(str(smtp_port_raw).strip())
+
+        msg = EmailMessage()
+        msg["Subject"] = f"{app_name} Password Reset"
+        msg["From"] = mail_from
+        msg["To"] = to_email
+        msg.set_content(
+            f"""Hello,
 
 We received a request to reset your password for {app_name}.
 
@@ -55,16 +58,17 @@ If you did not request this, you can ignore this email.
 Regards,
 {app_name}
 """
-    )
+        )
 
-    try:
         with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.starttls()
             server.login(smtp_user, smtp_pass)
             server.send_message(msg)
+
         return True, None
+
     except Exception as e:
-        return False, str(e)
+        return False, f"Email sending failed: {str(e)}"
 
 
 def cleanup_old_reset_tokens():
