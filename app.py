@@ -28,39 +28,28 @@ STYLE_MAP = {
 def send_reset_email(to_email, reset_link):
     try:
         smtp_host = os.environ.get("MAIL_HOST")
-        smtp_port_raw = os.environ.get("MAIL_PORT", "587")
+        smtp_port = int(str(os.environ.get("MAIL_PORT", "587")).strip())
         smtp_user = os.environ.get("MAIL_USERNAME")
         smtp_pass = os.environ.get("MAIL_PASSWORD")
         mail_from = os.environ.get("MAIL_FROM", smtp_user)
-        app_name = os.environ.get("MAIL_APP_NAME", "PCLE")
+        app_name = os.environ.get("MAIL_APP_NAME", "PCLE LMS")
 
-        if not smtp_host or not smtp_user or not smtp_pass or not mail_from:
-            return False, "Email settings are not configured."
-
-        smtp_port = int(str(smtp_port_raw).strip())
+        if not smtp_host or not smtp_user or not smtp_pass:
+            return False, "Email config missing"
 
         msg = EmailMessage()
         msg["Subject"] = f"{app_name} Password Reset"
         msg["From"] = mail_from
         msg["To"] = to_email
-        msg.set_content(
-            f"""Hello,
+        msg.set_content(f"""Reset your password:
 
-We received a request to reset your password for {app_name}.
-
-Please click the link below to reset your password:
 {reset_link}
 
-This link will expire in 15 minutes and can only be used once.
+Valid for 15 minutes.
+""")
 
-If you did not request this, you can ignore this email.
-
-Regards,
-{app_name}
-"""
-        )
-
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
+        # 🔥 IMPORTANT FIX: add timeout
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
             server.starttls()
             server.login(smtp_user, smtp_pass)
             server.send_message(msg)
@@ -68,7 +57,8 @@ Regards,
         return True, None
 
     except Exception as e:
-        return False, f"Email sending failed: {str(e)}"
+        print("EMAIL ERROR:", str(e))
+        return False, str(e)
 
 
 def cleanup_old_reset_tokens():
