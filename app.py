@@ -1,42 +1,84 @@
 import mysql.connector
+import json
+import os
+import re
+import secrets
+import smtplib
+from email.message import EmailMessage
+from datetime import datetime, timedelta
+from functools import wraps
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
-import json
-import os
-from flask import render_template, request, redirect, url_for
 from werkzeug.utils import secure_filename
-import re
-
-def convert_to_embed(url):
-    # Case 1: youtube watch?v=
-    match = re.search(r"v=([^&]+)", url)
-    if match:
-        video_id = match.group(1)
-        return f"https://www.youtube.com/embed/{video_id}"
-
-    # Case 2: youtu.be short link
-    match = re.search(r"youtu\.be/([^?&]+)", url)
-    if match:
-        video_id = match.group(1)
-        return f"https://www.youtube.com/embed/{video_id}"
-
-    return url
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret-key-before-deployment")
 
-# --- Database Connection Function (local)---
-#def get_db_connection():
-#    return mysql.connector.connect(
-#        host=os.environ.get("DB_HOST", "localhost"),
-#        user=os.environ.get("DB_USER", "root"),
-#        password=os.environ.get("DB_PASSWORD", "Mysql@work12"),
-#        database=os.environ.get("DB_NAME", "pcle_db")
-#    )
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- Database Connection Function (railway)---
+STYLE_MAP = {
+    "V": "Visual",
+    "A": "Auditory",
+    "R": "Reading/Writing",
+    "K": "Kinesthetic"
+}
+
+def send_reset_email(to_email, reset_link):
+    smtp_host = os.environ.get("MAIL_HOST")
+    smtp_port = int(os.environ.get("MAIL_PORT", 587))
+    smtp_user = os.environ.get("MAIL_USERNAME")
+    smtp_pass = os.environ.get("MAIL_PASSWORD")
+    mail_from = os.environ.get("MAIL_FROM", smtp_user)
+    app_name = os.environ.get("MAIL_APP_NAME", "PCLE")
+
+    if not smtp_host or not smtp_user or not smtp_pass or not mail_from:
+        return False, "Email settings are not configured."
+
+    msg = EmailMessage()
+    msg["Subject"] = f"{app_name} Password Reset"
+    msg["From"] = mail_from
+    msg["To"] = to_email
+    msg.set_content(
+        f"""Hello,
+
+We received a request to reset your password for {app_name}.
+
+Please click the link below to reset your password:
+{reset_link}
+
+This link will expire in 15 minutes and can only be used once.
+
+If you did not request this, you can ignore this email.
+
+Regards,
+{app_name}
+"""
+    )
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def cleanup_old_reset_tokens():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM password_reset_tokens
+        WHERE used = 1 OR expires_at < %s
+    """, (datetime.utcnow(),))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
 def get_db_connection():
     return mysql.connector.connect(
         host=os.environ.get("DB_HOST"),
@@ -47,7 +89,42 @@ def get_db_connection():
     )
 
 
-# Login required
+def convert_to_embed(url):
+    match = re.search(r"v=([^&]+)", url)
+    if match:
+        return f"https://www.youtube.com/embed/{match.group(1)}"
+
+    match = re.search(r"youtu\.be/([^?&]+)", url)
+    if match:
+        return f"https://www.youtube.com/embed/{match.group(1)}"
+
+    return url
+
+
+def build_k_case_json(form):
+    correct_answer = form.get("k_correct_answer", "").strip().upper()
+    if correct_answer not in ["A", "B", "C", "D"]:
+        correct_answer = ""
+
+    case_data = {
+        "scenario": form.get("k_scenario", "").strip(),
+        "question": form.get("k_question", "").strip(),
+        "option_a": form.get("k_option_a", "").strip(),
+        "option_b": form.get("k_option_b", "").strip(),
+        "option_c": form.get("k_option_c", "").strip(),
+        "option_d": form.get("k_option_d", "").strip(),
+        "correct_answer": correct_answer
+    }
+    return json.dumps(case_data)
+
+
+def parse_k_case_json(content):
+    try:
+        return json.loads(content) if content else None
+    except Exception:
+        return None
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -77,8 +154,53 @@ def initialize_progress_flags():
     session.setdefault('result_done', False)
 
 
+def get_subject_id_by_name(module_name):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id FROM subjects WHERE module_name = %s", (module_name,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row["id"] if row else None
+
+
+def get_current_subject_id():
+    module_name = session.get("module_name")
+    if not module_name:
+        return None
+    return get_subject_id_by_name(module_name)
+
+
+def ensure_module_progress(user_id, subject_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO module_progress (user_id, subject_id)
+        VALUES (%s, %s)
+        ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
+    """, (user_id, subject_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def get_module_progress_row(user_id, subject_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT *
+        FROM module_progress
+        WHERE user_id = %s AND subject_id = %s
+    """, (user_id, subject_id))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row
+
+
 def sync_progress_flags(user_id=None):
     initialize_progress_flags()
+
     if not user_id:
         user_id = session.get('user_id')
     if not user_id:
@@ -88,77 +210,56 @@ def sync_progress_flags(user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        session['subject_done'] = bool(session.get('module_name'))
-
         cursor.execute("SELECT learning_style FROM students WHERE user_id=%s", (user_id,))
         student = cursor.fetchone()
+
         if student and student.get('learning_style'):
             session['learning_style'] = student['learning_style']
             session['learning_style_full'] = STYLE_MAP.get(student['learning_style'])
             session['style_done'] = True
+        else:
+            session['style_done'] = False
 
-        cursor.execute("SELECT pre_score, final_score FROM assessment WHERE user_id=%s", (user_id,))
-        assessment_row = cursor.fetchone()
-        if assessment_row and assessment_row.get('pre_score') is not None:
-            session['preassessment_done'] = True
-        if assessment_row and assessment_row.get('final_score') is not None:
-            session['assessment_done'] = True
-            session['result_done'] = True
+        subject_id = get_current_subject_id()
 
-        if session.get('module_name') and session.get('learning_style'):
-            session['module_done'] = True
+        if subject_id:
+            cursor.execute("""
+                SELECT *
+                FROM module_progress
+                WHERE user_id = %s AND subject_id = %s
+            """, (user_id, subject_id))
+            progress = cursor.fetchone()
+
+            session['subject_done'] = True
+            session['preassessment_done'] = bool(progress and progress.get('pre_score') is not None)
+            session['module_done'] = bool(progress and progress.get('completed_content') == 1)
+            session['assessment_done'] = bool(progress and progress.get('final_score') is not None)
+            session['result_done'] = bool(progress and progress.get('final_score') is not None)
+        else:
+            session['subject_done'] = False
+            session['preassessment_done'] = False
+            session['module_done'] = False
+            session['assessment_done'] = False
+            session['result_done'] = False
 
         cursor.close()
         conn.close()
+
     except Exception:
         pass
 
-STYLE_MAP = {
-    "V": "Visual",
-    "A": "Auditory",
-    "R": "Reading/Writing",
-    "K": "Kinesthetic"
-}
 
-# --- Page Routes ---
 @app.route('/')
 def home():
     sync_progress_flags()
     return render_template('home.html')
 
-# LOGIN PAGE
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email'].strip()
-        password = request.form['password']
-        next_url = request.args.get('next') or request.form.get('next')
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+@app.route('/index')
+def legacy_index():
+    return redirect(url_for('home'))
 
-        cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
 
-        if user and check_password_hash(user['password'], password):
-            session.clear()
-            session['user_id'] = user['id']
-            session['email'] = user['email']
-            session['user_name'] = user['first_name']
-            initialize_progress_flags()
-            sync_progress_flags(user['id'])
-
-            flash("Login successful!", "success")
-            return redirect(next_url or url_for('home'))
-        else:
-            flash("Invalid email or password", "error")
-            return redirect(url_for('login'))
-
-    return render_template('login.html')
-
-# REGISTER PAGE
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -217,7 +318,188 @@ def register():
 
     return render_template('register.html')
 
-# LOGOUT
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email'].strip()
+        password = request.form['password']
+        next_url = request.args.get('next') or request.form.get('next')
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if user and check_password_hash(user['password'], password):
+            session.clear()
+            session['user_id'] = user['id']
+            session['email'] = user['email']
+            session['user_name'] = user['first_name']
+            initialize_progress_flags()
+            sync_progress_flags(user['id'])
+
+            flash("Login successful!", "success")
+            return redirect(next_url or url_for('home'))
+
+        flash("Invalid email or password", "error")
+        return redirect(url_for('login'))
+
+    return render_template('login.html')
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    cleanup_old_reset_tokens()
+
+    if request.method == 'POST':
+        email = request.form['email'].strip()
+
+        if not email:
+            flash("Please enter your email.", "error")
+            return redirect(url_for('forgot_password'))
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, email FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            cursor.close()
+            conn.close()
+            flash("No account found with that email.", "error")
+            return redirect(url_for('forgot_password'))
+
+        cursor.close()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE password_reset_tokens
+            SET used = 1
+            WHERE user_id = %s AND used = 0
+        """, (user['id'],))
+
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+        cursor.execute("""
+            INSERT INTO password_reset_tokens (user_id, token, expires_at, used)
+            VALUES (%s, %s, %s, 0)
+        """, (user['id'], token, expires_at))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        reset_link = url_for('reset_password', token=token, _external=True)
+
+        mail_sent, mail_error = send_reset_email(user['email'], reset_link)
+
+        if mail_sent:
+            flash("A password reset link has been sent to your email.", "success")
+            return render_template(
+                'forgot_password.html',
+                email_sent=True,
+                mail_error=None
+            )
+
+        flash("Unable to send email. Please try again later.", "error")
+        return render_template(
+            'forgot_password.html',
+            email_sent=False,
+            mail_error=mail_error
+        )
+
+    return render_template('forgot_password.html', email_sent=False, mail_error=None)
+
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    cleanup_old_reset_tokens()
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT prt.*, u.email
+        FROM password_reset_tokens prt
+        JOIN users u ON prt.user_id = u.id
+        WHERE prt.token = %s
+    """, (token,))
+    token_row = cursor.fetchone()
+
+    if not token_row:
+        cursor.close()
+        conn.close()
+        flash("Invalid reset link.", "error")
+        return redirect(url_for('forgot_password'))
+
+    if token_row['used'] == 1:
+        cursor.close()
+        conn.close()
+        flash("This reset link has already been used.", "error")
+        return redirect(url_for('forgot_password'))
+
+    if datetime.utcnow() > token_row['expires_at']:
+        cursor.close()
+        conn.close()
+        flash("This reset link has expired. Please request a new one.", "error")
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form['password']
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not password or not confirm_password:
+            flash("Please fill in all fields.", "error")
+            return redirect(url_for('reset_password', token=token))
+
+        if password != confirm_password:
+            flash("Password and confirm password do not match.", "error")
+            return redirect(url_for('reset_password', token=token))
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return redirect(url_for('reset_password', token=token))
+
+        has_letter = any(ch.isalpha() for ch in password)
+        has_number = any(ch.isdigit() for ch in password)
+
+        if not has_letter or not has_number:
+            flash("Password must contain at least one letter and one number.", "error")
+            return redirect(url_for('reset_password', token=token))
+
+        hashed_password = generate_password_hash(password)
+
+        cursor.close()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE users
+            SET password = %s
+            WHERE id = %s
+        """, (hashed_password, token_row['user_id']))
+
+        cursor.execute("""
+            UPDATE password_reset_tokens
+            SET used = 1
+            WHERE id = %s
+        """, (token_row['id'],))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash("Password reset successful! Please login.", "success")
+        return redirect(url_for('login'))
+
+    email = token_row['email']
+    cursor.close()
+    conn.close()
+
+    return render_template('reset_password.html', email=email, token=token)
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -225,242 +507,260 @@ def logout():
     return redirect(url_for('home'))
 
 
-#@app.route('/index')
-#def index():
-    #return render_template('index.html')
+@app.route('/admin_login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password']
 
-@app.route('/index')
-def legacy_index():
-    return redirect(url_for('home'))
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM admin WHERE username = %s", (username,))
+        admin = cursor.fetchone()
+        cursor.close()
+        conn.close()
 
-# --- Protected Pages ---
-#@app.route('/subject')
-#@login_required
-#def subject():
-#    return render_template('subject.html')
+        if admin and check_password_hash(admin['password'], password):
+            session.clear()
+            session['admin_logged_in'] = True
+            session['admin_id'] = admin['admin_id']
+            session['admin_username'] = admin['username']
+            session['admin_email'] = admin['email']
 
-#@app.route('/pre_assessment')
-#@login_required
-#def pre_assessment():
-#    module = session.get('module_name')
-#    return render_template('pre_assessment.html', module=module)
+            flash("Admin login successful!", "success")
+            return redirect(url_for('admin_home'))
 
-@app.route('/learning_style')
+        flash("Invalid admin username or password.", "error")
+        return redirect(url_for('admin_login'))
+
+    return render_template('admin_login.html')
+
+
+@app.route('/subject')
 @login_required
-def learning_style():
-    return render_template('learning_style.html')
-
-@app.route('/content', defaults={'module_name': None})
-@app.route('/content/<module_name>')
-@login_required
-def content(module_name=None):
-
-    if module_name:
-        session['module_name'] = module_name
-        session['subject_done'] = True
-
-    module_name = session.get('module_name')
-    learning_style = session.get('learning_style')
-
-    if not module_name:
-        flash("Please choose a module first.", "error")
-        return redirect(url_for('subject'))
-
-    if not learning_style:
-        flash("Please complete your learning style first.", "error")
-        return redirect(url_for('learning_style'))
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    if learning_style == "K":
-        query = """
-        SELECT lm.*, s.module_name
-        FROM learning_materials lm
-        JOIN subjects s ON lm.subject_id = s.id
-        WHERE s.module_name = %s
-        AND lm.learning_style = %s
-        AND lm.material_type IN ('text', 'k_case')
-        ORDER BY lm.id ASC
-        """
-        cursor.execute(query, (module_name, learning_style))
-    else:
-        style_map = {
-            "V": "pdf",
-            "A": "video",
-            "R": "pdf"
-        }
-
-        material_type = style_map.get(learning_style)
-
-        query = """
-        SELECT lm.*, s.module_name
-        FROM learning_materials lm
-        JOIN subjects s ON lm.subject_id = s.id
-        WHERE s.module_name = %s
-        AND lm.material_type = %s
-        AND lm.learning_style = %s
-        """
-        cursor.execute(query, (module_name, material_type, learning_style))
-
-    materials = cursor.fetchall()
-
-    for material in materials:
-        if material['material_type'] == 'k_case':
-            material['case_data'] = parse_k_case_json(material['content'])
-        else:
-            material['case_data'] = None
-
-    cursor.close()
-    conn.close()
-
-    session['module_done'] = True
-
-    return render_template(
-        'content.html',
-        materials=materials,
-        learning_style=learning_style,
-        module_name=module_name
-    )
-
-
-@app.route('/result')
-@login_required
-def result():
-    user_id = session.get('user_id')
+def subject():
+    user_id = session.get("user_id")
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT pre_score, final_score
-        FROM assessment
-        WHERE user_id = %s
+        SELECT 
+            s.id,
+            s.module_name,
+            s.module_description,
+            mp.pre_score,
+            mp.final_score,
+            mp.completed_content,
+            mp.completed_at
+        FROM subjects s
+        LEFT JOIN module_progress mp
+            ON s.id = mp.subject_id AND mp.user_id = %s
+        ORDER BY s.id ASC
     """, (user_id,))
-
-    data = cursor.fetchone()
-    cursor.close()
-    conn.close()
-
-    pre_score = data['pre_score'] if data and data['pre_score'] is not None else 0
-    final_score = data['final_score'] if data and data['final_score'] is not None else 0
-    session['result_done'] = bool(data)
-
-    return render_template(
-        "result.html",
-        pre_score=pre_score,
-        final_score=final_score,
-        pre_total=5,
-        final_total=5
-    )
-
-@app.route('/feedback')
-@login_required
-def feedback():
-    module_name = session.get('module_name')  # current module stored in session
-    return render_template("feedback.html", module_name=module_name)
-
-#@app.route('/recommended_module')
-#def recommended_module():
-
-#    print("SESSION:", dict(session))
-
-
-#    chosen_style = session.get('learning_style')
-
-#    if not chosen_style:
-#        return render_template(
-#            'recommended_module.html',
-#            recommended_modules=[]
-#        )
-
-    # Normalize styles
-#    train_df['Personalised learning styles'] = (
-#        train_df['Personalised learning styles']
-#        .astype(str)
-#        .str.upper()
-#        .str.replace(' ', '', regex=True)
-#    )
-
-#    users_with_style = train_df[
-#        train_df['Personalised learning styles'].str.contains(chosen_style, na=False)
-#    ]['Response number']
-
-#    if users_with_style.empty:
-#        return render_template(
-#            'recommended_module.html',
-#            recommended_modules=[]
-#        )
-
-    # Pick a representative learner
-#    target_user = users_with_style.iloc[0]
-
-    # 🔥 NCF + learner similarity
-#    recs = recommend_modules_by_learner(target_user, top_n=5)
-
-#    recommended_modules = [
-#        {
-#            "name": module,
-#            "description": "Recommended based on similar learners"
-#        }
-#        for module, _ in recs
-#    ]
-
-#    return render_template(
-#        'recommended_module.html',
-#        recommended_modules=recommended_modules
-#    )
-
-
-
-# --- API: Save Student Info ---
-#---@app.route('/save_student', methods=['POST'])
-#def save_student():
-#    data = request.get_json()
-
-#    student_id = data['studentId']
-#    student_name = data['studentName']
-#    user_id = session.get('user_id')
-
-#    conn = get_db_connection()
-#    cursor = conn.cursor()
-
-#    cursor.execute("""
-#        INSERT INTO students (user_id, student_id)
-#        VALUES (%s, %s)
-#    """, (user_id, student_id))
-
-#    conn.commit()
-#    conn.close()
-
-#    return jsonify({"message": "Student saved successfully!"})
-
-# --- API: Module Direct ---
-@app.route('/subject')
-@login_required
-def subject():
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM subjects")
     subjects = cursor.fetchall()
+
+    for s in subjects:
+        if s["final_score"] is not None:
+            s["status"] = "Completed"
+        elif s["pre_score"] is not None or s["completed_content"] == 1:
+            s["status"] = "In Progress"
+        else:
+            s["status"] = "Not Started"
 
     cursor.close()
     conn.close()
 
     return render_template('subject.html', modules=subjects)
 
+
 @app.route('/module/<module_name>')
 @login_required
 def module(module_name):
+    user_id = session.get("user_id")
+    subject_id = get_subject_id_by_name(module_name)
+
+    if not subject_id:
+        flash("Module not found.", "error")
+        return redirect(url_for("subject"))
+
+    progress = get_module_progress_row(user_id, subject_id)
+
+    if progress and progress.get("final_score") is not None:
+        flash("You already completed this module. You can view the result, but cannot redo it.", "error")
+        session["module_name"] = module_name
+        sync_progress_flags(user_id)
+        return redirect(url_for("result"))
 
     session['module_name'] = module_name
     session['subject_done'] = True
 
+    ensure_module_progress(user_id, subject_id)
+    sync_progress_flags(user_id)
+
     return redirect(url_for('pre_assessment', module_name=module_name))
 
-# --- API: Save Learning Style ---
+
+@app.route('/pre_assessment', defaults={'module_name': None})
+@app.route('/pre_assessment/<module_name>')
+@login_required
+def pre_assessment(module_name=None):
+    user_id = session.get("user_id")
+    module_name = module_name or session.get('module_name')
+
+    if not module_name:
+        flash("Please choose a module first.", "error")
+        return redirect(url_for('subject'))
+
+    subject_id = get_subject_id_by_name(module_name)
+    if not subject_id:
+        flash("Module not found.", "error")
+        return redirect(url_for("subject"))
+
+    progress = get_module_progress_row(user_id, subject_id)
+    if progress and progress.get("pre_score") is not None:
+        flash("Pre-assessment already completed for this module.", "error")
+        session["module_name"] = module_name
+        sync_progress_flags(user_id)
+        return redirect(url_for("learning_style"))
+
+    session['module_name'] = module_name
+    session['subject_done'] = True
+    ensure_module_progress(user_id, subject_id)
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT q.id, q.question_text, q.question_type,
+               q.option_a, q.option_b, q.option_c, q.option_d,
+               q.correct_answer
+        FROM questions q
+        JOIN subjects s ON q.subject_id = s.id
+        WHERE s.module_name = %s AND q.assessment_type = 'pre'
+    """, (module_name,))
+
+    questions = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('pre_assessment.html', questions=questions, module_name=module_name)
+
+
+@app.route('/save_pre_assessment', methods=['POST'])
+@login_required
+def save_pre_assessment():
+    data = request.get_json()
+    pre_score = data.get('pre_score')
+    user_id = session.get('user_id')
+    subject_id = get_current_subject_id()
+
+    if not user_id or not subject_id:
+        return jsonify({"message": "User or module missing"}), 400
+
+    ensure_module_progress(user_id, subject_id)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE module_progress
+        SET pre_score = %s
+        WHERE user_id = %s AND subject_id = %s
+    """, (pre_score, user_id, subject_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    session['preassessment_done'] = True
+    return jsonify({"message": "Pre-assessment saved!"})
+
+
+@app.route('/learning_style')
+@login_required
+def learning_style():
+    user_id = session.get("user_id")
+    subject_id = get_current_subject_id()
+
+    if not subject_id:
+        flash("Please choose a module first.", "error")
+        return redirect(url_for("subject"))
+
+    progress = get_module_progress_row(user_id, subject_id)
+    if not progress or progress.get("pre_score") is None:
+        flash("Please complete pre-assessment first.", "error")
+        return redirect(url_for("pre_assessment"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT learning_style
+        FROM module_progress
+        WHERE user_id = %s AND subject_id = %s
+    """, (user_id, subject_id))
+    progress_row = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    saved_style = None
+    saved_style_full = None
+    saved_icon = "🎓"
+    saved_description = ""
+    preferred_content = ""
+
+    if progress_row and progress_row.get("learning_style"):
+        saved_style = progress_row["learning_style"]
+        saved_style_full = STYLE_MAP.get(saved_style, saved_style)
+
+        style_info = {
+            "V": {
+                "icon": "👁️",
+                "description": "You usually learn better through diagrams, charts, images, and visual examples.",
+                "preferred_content": "Visual materials such as slide notes, diagrams and illustrated content"
+            },
+            "A": {
+                "icon": "🎧",
+                "description": "You usually learn better through listening, discussion, and spoken explanation.",
+                "preferred_content": "Audio or video-based learning materials"
+            },
+            "R": {
+                "icon": "📘",
+                "description": "You usually learn better through reading and writing, such as notes, text explanations, and guides.",
+                "preferred_content": "Text-rich materials such as notes, articles and written explanations"
+            },
+            "K": {
+                "icon": "🛠️",
+                "description": "You usually learn better through practice, hands-on activities, and learning by doing.",
+                "preferred_content": "Practical tasks, activities and interactive learning content"
+            }
+        }
+
+        if saved_style in style_info:
+            saved_icon = style_info[saved_style]["icon"]
+            saved_description = style_info[saved_style]["description"]
+            preferred_content = style_info[saved_style]["preferred_content"]
+
+        session['learning_style'] = saved_style
+        session['learning_style_full'] = saved_style_full
+        session['style_done'] = True
+
+        return render_template(
+            'learning_style.html',
+            locked=True,
+            saved_style=saved_style,
+            saved_style_full=saved_style_full,
+            saved_icon=saved_icon,
+            saved_description=saved_description,
+            preferred_content=preferred_content
+        )
+
+    return render_template(
+        'learning_style.html',
+        locked=False
+    )
+
+
 @app.route('/save_learning_style', methods=['POST'])
 @login_required
 def save_learning_style():
@@ -479,163 +779,220 @@ def save_learning_style():
     }
 
     normalized_style = style_map.get(learning_style, "")
-
     if not normalized_style:
         return jsonify({"message": "Invalid style"}), 400
 
     user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({"message": "User not logged in"}), 401
+    subject_id = get_current_subject_id()
 
-    # ✅ STORE BOTH
-    session['learning_style'] = normalized_style
-    session['learning_style_full'] = STYLE_MAP.get(normalized_style)
-    session['style_done'] = True
+    if not user_id or not subject_id:
+        return jsonify({"message": "User or module missing"}), 400
 
     conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT learning_style
+        FROM module_progress
+        WHERE user_id = %s AND subject_id = %s
+    """, (user_id, subject_id))
+    existing_progress = cursor.fetchone()
+
+    if existing_progress and existing_progress.get("learning_style"):
+        cursor.close()
+        conn.close()
+        return jsonify({"message": "Learning style already saved. This step is locked."}), 400
+
+    cursor.close()
     cursor = conn.cursor()
 
     cursor.execute("""
         UPDATE students
-        SET learning_style=%s
-        WHERE user_id=%s
+        SET learning_style = %s
+        WHERE user_id = %s
     """, (normalized_style, user_id))
 
+    cursor.execute("""
+        UPDATE module_progress
+        SET learning_style = %s
+        WHERE user_id = %s AND subject_id = %s
+    """, (normalized_style, user_id, subject_id))
+
     conn.commit()
+    cursor.close()
     conn.close()
+
+    session['learning_style'] = normalized_style
+    session['learning_style_full'] = STYLE_MAP.get(normalized_style)
+    session['style_done'] = True
 
     return jsonify({"message": "Learning style saved!"})
 
-# --- API: Pre assessment ---
-@app.route('/pre_assessment', defaults={'module_name': None})
-@app.route('/pre_assessment/<module_name>')
-@login_required
-def pre_assessment(module_name=None):
 
-    module_name = module_name or session.get('module_name')
+@app.route('/content', defaults={'module_name': None})
+@app.route('/content/<module_name>')
+@login_required
+def content(module_name=None):
+    user_id = session.get("user_id")
+
+    if module_name:
+        session['module_name'] = module_name
+
+    module_name = session.get('module_name')
+    learning_style = session.get('learning_style')
+
     if not module_name:
         flash("Please choose a module first.", "error")
         return redirect(url_for('subject'))
 
-    session['module_name'] = module_name
-    session['subject_done'] = True
+    if not learning_style:
+        flash("Please complete your learning style first.", "error")
+        return redirect(url_for('learning_style'))
+
+    subject_id = get_subject_id_by_name(module_name)
+    progress = get_module_progress_row(user_id, subject_id)
+
+    if progress and progress.get("final_score") is not None:
+        flash("You already completed this module.", "error")
+        return redirect(url_for("result"))
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    query = """
-    SELECT q.id, q.question_text, q.question_type,
-        q.option_a, q.option_b, q.option_c, q.option_d,
-        q.correct_answer
-    FROM questions q
-    JOIN subjects s ON q.subject_id = s.id
-    WHERE s.module_name = %s AND q.assessment_type = 'pre'
-    """
+    if learning_style == "K":
+        cursor.execute("""
+            SELECT lm.*, s.module_name
+            FROM learning_materials lm
+            JOIN subjects s ON lm.subject_id = s.id
+            WHERE s.module_name = %s
+              AND lm.learning_style = %s
+              AND lm.material_type IN ('text', 'k_case')
+            ORDER BY lm.id ASC
+        """, (module_name, learning_style))
+    else:
+        style_material_map = {
+            "V": "pdf",
+            "A": "video",
+            "R": "pdf"
+        }
+        material_type = style_material_map.get(learning_style)
 
-    cursor.execute(query, (module_name,))
-    questions = cursor.fetchall()
+        cursor.execute("""
+            SELECT lm.*, s.module_name
+            FROM learning_materials lm
+            JOIN subjects s ON lm.subject_id = s.id
+            WHERE s.module_name = %s
+              AND lm.material_type = %s
+              AND lm.learning_style = %s
+        """, (module_name, material_type, learning_style))
+
+    materials = cursor.fetchall()
+
+    for material in materials:
+        if material['material_type'] == 'k_case':
+            material['case_data'] = parse_k_case_json(material['content'])
+        else:
+            material['case_data'] = None
 
     cursor.close()
     conn.close()
 
     return render_template(
-        'pre_assessment.html',
-        questions=questions,
+        'content.html',
+        materials=materials,
+        learning_style=learning_style,
         module_name=module_name
     )
 
-# --- API: Save Pre Assessment score ---
 
-# --- API: Save Pre Assessment score ---
-@app.route('/save_pre_assessment', methods=['POST'])
+@app.route('/mark_content_complete', methods=['POST'])
 @login_required
-def save_pre_assessment():
-    data = request.get_json()
-    pre_score = data.get('pre_score')
-    user_id = session.get('user_id')
+def mark_content_complete():
+    user_id = session.get("user_id")
+    subject_id = get_current_subject_id()
 
-    if not user_id:
-        return jsonify({"message": "User not logged in"}), 401
+    if not user_id or not subject_id:
+        return jsonify({"message": "User or module missing"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute("""
-        INSERT INTO assessment (user_id, pre_score)
-        VALUES (%s, %s)
-        ON DUPLICATE KEY UPDATE pre_score = VALUES(pre_score)
-    """, (user_id, pre_score))
-
+        UPDATE module_progress
+        SET completed_content = 1
+        WHERE user_id = %s AND subject_id = %s
+    """, (user_id, subject_id))
     conn.commit()
+    cursor.close()
     conn.close()
 
-    session['preassessment_done'] = True
+    session["module_done"] = True
+    return jsonify({"message": "Content marked complete!"})
 
-    return jsonify({"message": "Pre-assessment saved!"})
 
-# --- API: Final Assessment --
 @app.route('/final_assessment', defaults={'module_name': None})
 @app.route('/final_assessment/<module_name>')
 @login_required
 def final_assessment(module_name=None):
-
+    user_id = session.get("user_id")
     module_name = module_name or session.get('module_name')
+
     if not module_name:
         flash("Please choose a module first.", "error")
         return redirect(url_for('subject'))
+
+    subject_id = get_subject_id_by_name(module_name)
+    progress = get_module_progress_row(user_id, subject_id)
+
+    if not progress or progress.get("completed_content") != 1:
+        flash("Please complete the learning content first.", "error")
+        return redirect(url_for("content"))
+
+    if progress.get("final_score") is not None:
+        flash("Final assessment already completed for this module.", "error")
+        return redirect(url_for("result"))
 
     session['module_name'] = module_name
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    query = """
-    SELECT q.id, q.question_text, q.question_type,
-        q.option_a, q.option_b, q.option_c, q.option_d,
-        q.correct_answer
-    FROM questions q
-    JOIN subjects s ON q.subject_id = s.id
-    WHERE s.module_name = %s AND q.assessment_type = 'final'
-    """
+    cursor.execute("""
+        SELECT q.id, q.question_text, q.question_type,
+               q.option_a, q.option_b, q.option_c, q.option_d,
+               q.correct_answer
+        FROM questions q
+        JOIN subjects s ON q.subject_id = s.id
+        WHERE s.module_name = %s AND q.assessment_type = 'final'
+    """, (module_name,))
 
-    cursor.execute(query, (module_name,))
     questions = cursor.fetchall()
-
     cursor.close()
     conn.close()
 
-    return render_template(
-        'final_assessment.html',
-        questions=questions,
-        module_name=module_name
-    )
+    return render_template('final_assessment.html', questions=questions, module_name=module_name)
 
 
-# --- API: Save Final Assessment score ---
-
-
-# --- API: Save Final Assessment score ---
 @app.route('/save_final_assessment', methods=['POST'])
 @login_required
 def save_final_assessment():
-
     data = request.get_json()
     final_score = data.get('final_score')
     user_id = session.get('user_id')
+    subject_id = get_current_subject_id()
 
-    if not user_id:
-        return jsonify({"message": "User not logged in"}), 401
+    if not user_id or not subject_id:
+        return jsonify({"message": "User or module missing"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute("""
-        INSERT INTO assessment (user_id, final_score)
-        VALUES (%s, %s)
-        ON DUPLICATE KEY UPDATE final_score = VALUES(final_score)
-    """, (user_id, final_score))
-
+        UPDATE module_progress
+        SET final_score = %s,
+            completed_at = CURRENT_TIMESTAMP
+        WHERE user_id = %s AND subject_id = %s
+    """, (final_score, user_id, subject_id))
     conn.commit()
+    cursor.close()
     conn.close()
 
     session['assessment_done'] = True
@@ -644,7 +1001,59 @@ def save_final_assessment():
     return jsonify({"message": "Final assessment saved!"})
 
 
-# --- API: Save Feedback ---
+@app.route('/result')
+@login_required
+def result():
+    user_id = session.get('user_id')
+    subject_id = get_current_subject_id()
+
+    if not subject_id:
+        flash("Please choose a module first.", "error")
+        return redirect(url_for("subject"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT s.module_name, mp.pre_score, mp.final_score
+        FROM module_progress mp
+        JOIN subjects s ON mp.subject_id = s.id
+        WHERE mp.user_id = %s AND mp.subject_id = %s
+    """, (user_id, subject_id))
+
+    data = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not data:
+        flash("No result found for this module.", "error")
+        return redirect(url_for("subject"))
+
+    pre_score = data['pre_score'] if data['pre_score'] is not None else 0
+    final_score = data['final_score'] if data['final_score'] is not None else 0
+    improvement = final_score - pre_score
+
+    session['result_done'] = data['final_score'] is not None
+
+    return render_template(
+        "result.html",
+        module_name=data["module_name"],
+        pre_score=pre_score,
+        final_score=final_score,
+        improvement=improvement
+    )
+
+
+@app.route('/feedback')
+@login_required
+def feedback():
+    module_name = session.get('module_name')
+    if not module_name:
+        flash("Please choose a module first.", "error")
+        return redirect(url_for("subject"))
+    return render_template("feedback.html", module_name=module_name)
+
+
 @app.route('/save_feedback', methods=['POST'])
 @login_required
 def save_feedback():
@@ -653,18 +1062,30 @@ def save_feedback():
     module_name = data.get('module_name') or session.get('module_name')
     helpfulness = data.get('helpfulness_score')
     recommend = data.get('recommend_score')
-    comments = data.get('comments')
+    comments = (data.get('comments') or "").strip()
 
     if not module_name:
         return jsonify({"message": "Module name missing"}), 400
 
-    user_id = session.get('user_id')
+    if not comments:
+        return jsonify({"message": "Comment is required"}), 400
 
-    if not user_id:
-        return jsonify({"message": "User not logged in"}), 401
+    user_id = session.get('user_id')
+    subject_id = get_subject_id_by_name(module_name)
+
+    if not user_id or not subject_id:
+        return jsonify({"message": "User or module missing"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE module_progress
+        SET helpfulness_score = %s,
+            recommend_score = %s,
+            comments = %s
+        WHERE user_id = %s AND subject_id = %s
+    """, (helpfulness, recommend, comments, user_id, subject_id))
 
     cursor.execute("""
         INSERT INTO feedback (user_id, module_name, helpfulness_score, recommend_score, comments)
@@ -672,158 +1093,74 @@ def save_feedback():
     """, (user_id, module_name, helpfulness, recommend, comments))
 
     conn.commit()
+    cursor.close()
     conn.close()
 
     return jsonify({"message": "Feedback saved!"})
 
-# Show Recommended Modules (old version)
-#@app.route('/recommended_modules')
-#def recommended_modules():
 
-#    user_id = session.get('user_id')
+@app.route('/recommend')
+@login_required
+def recommend():
+    user_id = session.get('user_id')
+    current_module = session.get('module_name')
+    chosen_style = session.get('learning_style')
 
-#    if not user_id:
-#        return redirect(url_for('login'))
+    if not chosen_style:
+        flash("Please complete your learning style first.", "error")
+        return redirect(url_for('learning_style'))
 
-#    conn = get_db_connection()
-#    cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
 
-    # Get recommendations + module details
-#    cursor.execute("""
-#        SELECT r.module_name, r.similarity_score,
-#               s.module_description
-#        FROM recommendation r
-#        JOIN subjects s ON r.module_name = s.module_name
-#        WHERE r.user_id = %s
-#        ORDER BY r.similarity_score DESC
-#    """, (user_id,))
+    cursor.execute("""
+        SELECT DISTINCT module_name
+        FROM feedback
+        WHERE user_id = %s
+    """, (user_id,))
+    done_modules = {row["module_name"] for row in cursor.fetchall()}
 
-#    recommended_modules = cursor.fetchall()
+    cursor.execute("""
+        SELECT f.module_name,
+               AVG(f.recommend_score) AS avg_rating,
+               COUNT(*) AS total_votes,
+               s.module_description
+        FROM feedback f
+        JOIN students st ON f.user_id = st.user_id
+        JOIN subjects s ON f.module_name = s.module_name
+        WHERE st.learning_style = %s
+          AND f.recommend_score IS NOT NULL
+        GROUP BY f.module_name, s.module_description
+        HAVING COUNT(*) > 0
+        ORDER BY avg_rating DESC, total_votes DESC
+    """, (chosen_style,))
 
-#    conn.close()
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
 
-#    return render_template(
-#        'recommended_modules.html',
-#        recommended_modules=recommended_modules
-#    )
+    recommended_modules = []
+    for row in rows:
+        if row["module_name"] == current_module:
+            continue
+        if row["module_name"] in done_modules:
+            continue
+        recommended_modules.append(row)
 
-# --- API: Save Recommendation(old that use excel) ---
-#@app.route('/save_recommendations', methods=['POST'])
-#def save_recommendations():
-#    data = request.get_json()
-#    recommendations = data.get('recommendations')  # list of modules
+    recommended_modules = recommended_modules[:5]
 
-#    user_id = session.get('user_id')
-
-#    if not user_id:
-#        return jsonify({"message": "User not logged in"}), 401
-
-#    conn = get_db_connection()
-#    cursor = conn.cursor()
-
-#    for rec in recommendations:
-#        cursor.execute("""
-#            INSERT INTO recommendations (user_id, module_name, recommendation_type)
-#            VALUES (%s, %s, %s)
-#        """, (user_id, rec, "system"))
-
-#    conn.commit()
-#    conn.close()
-
-#    return jsonify({"message": "Recommendations saved!"})
+    return render_template("recommended_module.html", recommended_modules=recommended_modules)
 
 
-# ------------------------------
-# LOAD & PREPROCESS DATA(old that use excel)
-# ------------------------------
-#feedback_df = pd.read_csv("Module Feedback 3rd round.csv")
-#draft_df = pd.read_csv("draft 3rd round.csv")
+@app.route('/recommended_module')
+@login_required
+def recommended_module():
+    return redirect(url_for('recommend'))
 
-#draft_df.dropna(subset=['Personalised learning styles', 'Response number', 'Course'], inplace=True)
-#merged_df = pd.merge(draft_df, feedback_df, on='Response number', how='inner')
-#merged_df.dropna(subset=['(MD1F) How would you recommend this module to your friends?'], inplace=True)
-
-#valid_modules = merged_df['Module'].value_counts()[merged_df['Module'].value_counts() >= 3].index
-#merged_df = merged_df[merged_df['Module'].isin(valid_modules)]
-
-#train_df, test_df = train_test_split(merged_df, test_size=0.4, random_state=42)
-
-# Encode users & modules
-#user_ids = train_df['Response number'].unique()
-#user_to_idx = {u: i for i, u in enumerate(user_ids)}
-#idx_to_user = {i: u for u, i in user_to_idx.items()}
-
-#module_ids = train_df['Module'].unique()
-#module_to_idx = {m: i for i, m in enumerate(module_ids)}
-#idx_to_module = {i: m for m, i in module_to_idx.items()}
-
-#def encode_learner_style(style):
-#    style_map = {'V':0, 'A':1, 'R':2, 'K':3}
-#    vector = np.zeros(4)
-#    for s in str(style).replace(' ','').replace(',',''):
-#        if s in style_map:
-#            vector[style_map[s]] = 1
-#    return vector
-
-# -----------------------------
-# Define NCF model
-# -----------------------------
-#embedding_dim = 10
-
-#user_input = Input(shape=(1,), name="User_Input")
-#module_input = Input(shape=(1,), name="Module_Input")
-#style_input = Input(shape=(4,), name="Style_Input")
-
-#user_embedding = Embedding(input_dim=len(user_ids), output_dim=embedding_dim, name="User_Embedding")(user_input)
-#module_embedding = Embedding(input_dim=len(module_ids), output_dim=embedding_dim, name="Module_Embedding")(module_input)
-
-#user_vec = Flatten()(user_embedding)
-#module_vec = Flatten()(module_embedding)
-
-#x = Concatenate()([user_vec, module_vec, style_input])
-#x = Dense(32, activation='relu')(x)
-#x = Dense(16, activation='relu')(x)
-#output = Dense(1, activation='linear')(x)
-
-#ncf_model = Model(inputs=[user_input, module_input, style_input], outputs=output)
-#ncf_model.compile(optimizer='adam', loss='mse')
-
-# -----------------------------
-# Prepare training data
-# -----------------------------
-#train_users = np.array([user_to_idx[u] for u in train_df['Response number']])
-#train_modules = np.array([module_to_idx[m] for m in train_df['Module']])
-#train_styles = np.array([encode_learner_style(s) for s in train_df['Personalised learning styles']])
-#train_labels = train_df['(MD1F) How would you recommend this module to your friends?'].values
-
-# Train model
-#ncf_model.fit([train_users, train_modules, train_styles], train_labels, epochs=10, batch_size=8, verbose=1)
-
-# -----------------------------
-# Learner similarity
-# -----------------------------
-#user_embeddings = ncf_model.get_layer('User_Embedding').get_weights()[0]
-#learner_similarity = cosine_similarity(user_embeddings)
-
-#def recommend_modules_by_learner(user_id, top_n=5):
-#    if user_id not in user_to_idx:
-#        return []
-#    u_idx = user_to_idx[user_id]
-#    similar_users_idx = np.argsort(learner_similarity[u_idx])[::-1][1:top_n+5]
-#    candidate_modules = {}
-#    for su_idx in similar_users_idx:
-#        sim_user_id = idx_to_user[su_idx]
-#        sim_score = learner_similarity[u_idx][su_idx]
-#        modules_taken = train_df[train_df['Response number']==sim_user_id]['Module'].values
-#        for m in modules_taken:
-#            candidate_modules[m] = candidate_modules.get(m, 0) + sim_score
-#    return sorted(candidate_modules.items(), key=lambda x: x[1], reverse=True)[:top_n]
 
 @app.route('/modules')
 @login_required
 def modules():
-    if session.get('module_name') and session.get('learning_style'):
-        return redirect(url_for('content'))
     return redirect(url_for('subject'))
 
 
@@ -843,284 +1180,21 @@ def results():
     return redirect(url_for('result'))
 
 
-@app.route('/recommended_module')
-@login_required
-def recommended_module():
-    return redirect(url_for('recommend'))
-
-# ------------------------------
-# LOAD DATA FROM DATABASE
-# ------------------------------
-@app.route('/recommend')
-@login_required
-def recommend():
-    import pandas as pd
-    import numpy as np
-    #from sklearn.model_selection import train_test_split
-    from sklearn.metrics.pairwise import cosine_similarity
-    from tensorflow.keras.models import Model
-    from tensorflow.keras.layers import Input, Embedding, Flatten, Dense, Concatenate
-
-    chosen_style = session.get('learning_style')
-    user_id = session.get('user_id')
-
-    if not chosen_style:
-        flash("Please complete your learning style before requesting recommendations.", "error")
-        return redirect(url_for('learning_style'))
-
-    chosen_style = str(chosen_style).upper().replace(' ', '')
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    query = """
-    SELECT 
-        f.user_id AS `Response number`,
-        f.module_name AS Module,
-        f.recommend_score AS rating,
-        s.learning_style AS `Personalised learning styles`
-    FROM feedback f
-    JOIN students s ON f.user_id = s.user_id
-    WHERE f.recommend_score IS NOT NULL
-    """
-
-    train_df = pd.read_sql(query, conn)
-
-    if train_df.empty:
-        cursor.execute("""
-            SELECT module_name, module_description
-            FROM subjects
-            ORDER BY module_name ASC
-            LIMIT 5
-        """)
-        recommended_modules = [
-            {**row, 'similarity_score': 0}
-            for row in cursor.fetchall()
-        ]
-        cursor.close()
-        conn.close()
-        return render_template("recommended_module.html", recommended_modules=recommended_modules)
-
-    train_df['Personalised learning styles'] = (
-        train_df['Personalised learning styles']
-        .astype(str)
-        .str.upper()
-        .str.replace(' ', '', regex=True)
-    )
-
-    same_style_df = train_df[
-        train_df['Personalised learning styles'].str.contains(chosen_style, na=False)
-    ].copy()
-
-    if same_style_df.empty:
-        same_style_df = train_df.copy()
-
-    user_ids = same_style_df['Response number'].unique()
-    module_ids = same_style_df['Module'].unique()
-
-    if len(user_ids) < 2 or len(module_ids) == 0:
-        fallback = (
-            same_style_df.groupby('Module', as_index=False)['rating']
-            .mean()
-            .sort_values('rating', ascending=False)
-            .head(5)
-        )
-        recommended_modules = []
-        for _, row in fallback.iterrows():
-            cursor.execute("SELECT module_description FROM subjects WHERE module_name=%s", (row['Module'],))
-            subject_row = cursor.fetchone() or {'module_description': ''}
-            recommended_modules.append({
-                'module_name': row['Module'],
-                'similarity_score': float(row['rating']),
-                'module_description': subject_row['module_description']
-            })
-        cursor.close()
-        conn.close()
-        return render_template("recommended_module.html", recommended_modules=recommended_modules)
-
-    user_to_idx = {u: i for i, u in enumerate(user_ids)}
-    idx_to_user = {i: u for u, i in user_to_idx.items()}
-    module_to_idx = {m: i for i, m in enumerate(module_ids)}
-
-    def encode_learner_style(style):
-        style_map = {'V': 0, 'A': 1, 'R': 2, 'K': 3}
-        vector = np.zeros(4)
-        for s in str(style).replace(' ', ''):
-            if s in style_map:
-                vector[style_map[s]] = 1
-        return vector
-
-    train_users = np.array([user_to_idx[u] for u in same_style_df['Response number']])
-    train_modules = np.array([module_to_idx[m] for m in same_style_df['Module']])
-    train_styles = np.array([encode_learner_style(s) for s in same_style_df['Personalised learning styles']])
-    train_labels = same_style_df['rating'].astype(float).values
-
-    embedding_dim = 10
-
-    user_input = Input(shape=(1,))
-    module_input = Input(shape=(1,))
-    style_input = Input(shape=(4,))
-
-    user_embedding_layer = Embedding(len(user_ids), embedding_dim)
-    module_embedding_layer = Embedding(len(module_ids), embedding_dim)
-
-    user_embedding = user_embedding_layer(user_input)
-    module_embedding = module_embedding_layer(module_input)
-
-    user_vec = Flatten()(user_embedding)
-    module_vec = Flatten()(module_embedding)
-
-    x = Concatenate()([user_vec, module_vec, style_input])
-    x = Dense(32, activation='relu')(x)
-    x = Dense(16, activation='relu')(x)
-    output = Dense(1)(x)
-
-    ncf_model = Model([user_input, module_input, style_input], output)
-    ncf_model.compile(optimizer='adam', loss='mse')
-    ncf_model.fit(
-        [train_users, train_modules, train_styles],
-        train_labels,
-        epochs=10,
-        batch_size=8,
-        verbose=0
-    )
-
-    user_embedding_weights = user_embedding_layer.get_weights()[0]
-    learner_similarity = cosine_similarity(user_embedding_weights)
-
-    target_user = user_id if user_id in user_to_idx else same_style_df['Response number'].iloc[0]
-
-    def recommend_modules_by_learner(target_user_id, top_n=5):
-        if target_user_id not in user_to_idx:
-            return []
-
-        u_idx = user_to_idx[target_user_id]
-        similar_users_idx = np.argsort(learner_similarity[u_idx])[::-1][1:top_n + 5]
-        user_seen_modules = set(
-            same_style_df[same_style_df['Response number'] == target_user_id]['Module'].tolist()
-        )
-        candidate_modules = {}
-
-        for su_idx in similar_users_idx:
-            sim_user_id = idx_to_user[su_idx]
-            sim_score = learner_similarity[u_idx][su_idx]
-            modules_taken = same_style_df[
-                same_style_df['Response number'] == sim_user_id
-            ]['Module'].values
-
-            for m in modules_taken:
-                if m in user_seen_modules:
-                    continue
-                candidate_modules[m] = candidate_modules.get(m, 0) + float(sim_score)
-
-        return sorted(candidate_modules.items(), key=lambda x: x[1], reverse=True)[:top_n]
-
-    recs = recommend_modules_by_learner(target_user)
-
-    if not recs:
-        fallback = (
-            same_style_df.groupby('Module', as_index=False)['rating']
-            .mean()
-            .sort_values('rating', ascending=False)
-            .head(5)
-        )
-        recs = [(row['Module'], float(row['rating'])) for _, row in fallback.iterrows()]
-
-    cursor.execute("DELETE FROM recommendations WHERE user_id = %s", (user_id,))
-    for module_name, sim_score in recs:
-        cursor.execute("""
-            INSERT INTO recommendations (user_id, module_name, similarity_score)
-            VALUES (%s, %s, %s)
-        """, (user_id, module_name, sim_score))
-    conn.commit()
-
-    cursor.execute("""
-        SELECT r.module_name, r.similarity_score, s.module_description
-        FROM recommendations r
-        JOIN subjects s ON r.module_name = s.module_name
-        WHERE r.user_id = %s
-        ORDER BY r.similarity_score DESC
-    """, (user_id,))
-    recommended_modules = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return render_template("recommended_module.html", recommended_modules=recommended_modules)
-
 # -----------------------------
-# Admin Login
-#ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
-#ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-
+# ADMIN DASHBOARD
 # -----------------------------
-# Admin Login
-# -----------------------------
-#@app.route('/admin_login', methods=['GET', 'POST'])
-#def admin_login():
-#    if request.method == 'POST':
-#        username = request.form['username']
-#        password = request.form['password']
-
-        # Hardcoded admin credentials for now
-#        if username == "admin" and password == "admin123":
-        #if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-#            session['admin_logged_in'] = True
-#            flash("Admin login successful!", "success")
-#            return redirect(url_for('admin_home'))
-#        else:
-#            flash("Invalid admin username or password.", "error")
-#            return redirect(url_for('admin_login'))
-
-#    return render_template('admin_login.html')
-
-@app.route('/admin_login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password']
-
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        cursor.execute("SELECT * FROM admin WHERE username = %s", (username,))
-        admin = cursor.fetchone()
-
-        cursor.close()
-        conn.close()
-
-        if admin and admin['password'] == password:
-            session.clear()
-            session['admin_logged_in'] = True
-            session['admin_id'] = admin['admin_id']
-            session['admin_username'] = admin['username']
-            session['admin_email'] = admin['email']
-
-            flash("Admin login successful!", "success")
-            return redirect(url_for('admin_home'))
-        else:
-            flash("Invalid admin username or password.", "error")
-            return redirect(url_for('admin_login'))
-
-    return render_template('admin_login.html')
-
-# Temporary storage
-subjects_list = []
-
-# Admin home
 @app.route('/admin_home')
 @admin_required
 def admin_home():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # 1. Student Performance
     cursor.execute("""
         SELECT 
             AVG(pre_score) AS avg_pre,
             AVG(final_score) AS avg_final,
             AVG(final_score - pre_score) AS avg_improvement
-        FROM assessment
+        FROM module_progress
         WHERE pre_score IS NOT NULL AND final_score IS NOT NULL
     """)
     performance = cursor.fetchone()
@@ -1139,15 +1213,12 @@ def admin_home():
         performance['avg_final_pct'] = (performance['avg_final'] / 5) * 100
         performance['avg_improvement_pct'] = (performance['avg_improvement'] / 5) * 100
 
-    # 2. Total Students
     cursor.execute("SELECT COUNT(*) AS total_students FROM students")
     total_students = cursor.fetchone()['total_students']
 
-    # Total modules
     cursor.execute("SELECT COUNT(*) AS total_modules FROM subjects")
     total_modules = cursor.fetchone()['total_modules']
 
-    # 3. Score Distribution
     cursor.execute("""
         SELECT 
             CASE
@@ -1156,13 +1227,12 @@ def admin_home():
                 ELSE 'High'
             END AS category,
             COUNT(*) AS count
-        FROM assessment
+        FROM module_progress
         WHERE final_score IS NOT NULL
         GROUP BY category
     """)
     score_distribution = cursor.fetchall() or []
 
-    # 4. Learning Styles
     cursor.execute("""
         SELECT 
             CASE
@@ -1179,14 +1249,10 @@ def admin_home():
     """)
     learning_styles = cursor.fetchall() or []
 
-    # 5. Recommendations
-    # Top recommended modules only
     cursor.execute("""
         SELECT module_name, COUNT(*) AS rec_count
-        FROM recommendations
-        WHERE module_name IS NOT NULL
-        AND module_name <> ''
-        AND module_name <> 'None'
+        FROM feedback
+        WHERE recommend_score >= 4
         GROUP BY module_name
         ORDER BY rec_count DESC
         LIMIT 5
@@ -1197,7 +1263,6 @@ def admin_home():
     top_learning_style = learning_styles[0]['learning_style'] if learning_styles else "No data"
 
     summary_points = []
-
     if performance['avg_final'] > performance['avg_pre']:
         summary_points.append(
             f"Students improved by an average of {performance['avg_improvement']:.2f} marks ({performance['avg_improvement_pct']:.1f}%)."
@@ -1209,6 +1274,7 @@ def admin_home():
     summary_points.append(f"The most recommended module is {top_recommended_module}.")
     summary_points.append(f"The system currently has {total_students} registered student profiles.")
 
+    cursor.close()
     conn.close()
 
     return render_template(
@@ -1223,7 +1289,10 @@ def admin_home():
         summary_points=summary_points
     )
 
-# Admin add module
+
+# -----------------------------
+# ADMIN MODULE
+# -----------------------------
 @app.route('/admin_add_module', methods=['GET', 'POST'])
 @admin_required
 def admin_add_module():
@@ -1231,8 +1300,8 @@ def admin_add_module():
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
-        module_name = request.form['module_name']
-        module_description = request.form['module_description']
+        module_name = request.form['module_name'].strip()
+        module_description = request.form['module_description'].strip()
 
         cursor.execute("""
             INSERT INTO subjects (module_name, module_description)
@@ -1243,61 +1312,58 @@ def admin_add_module():
         flash("Module added successfully!", "success")
         return redirect(url_for('admin_add_module'))
 
-    cursor.execute("SELECT * FROM subjects")
+    cursor.execute("SELECT * FROM subjects ORDER BY id ASC")
     modules = cursor.fetchall()
 
+    cursor.close()
     conn.close()
     return render_template('admin_add_module.html', modules=modules)
 
-# Admin delete module
+
 @app.route('/delete_module/<int:module_id>')
 @admin_required
 def delete_module(module_id):
-
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute("DELETE FROM subjects WHERE id=%s", (module_id,))
-
     conn.commit()
+    cursor.close()
     conn.close()
-
     return redirect(url_for('admin_add_module'))
 
 
-# Admin edit module
 @app.route('/edit_module/<int:module_id>', methods=['GET', 'POST'])
 @admin_required
 def edit_module(module_id):
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
-        module_name = request.form['module_name']
-        module_description = request.form['module_description']
+        module_name = request.form['module_name'].strip()
+        module_description = request.form['module_description'].strip()
 
         cursor.execute("""
             UPDATE subjects
-            SET module_name=%s,
-                module_description=%s
+            SET module_name=%s, module_description=%s
             WHERE id=%s
         """, (module_name, module_description, module_id))
 
         conn.commit()
+        cursor.close()
         conn.close()
-
         return redirect(url_for('admin_add_module'))
 
-    # GET data
     cursor.execute("SELECT * FROM subjects WHERE id=%s", (module_id,))
     module = cursor.fetchone()
 
+    cursor.close()
     conn.close()
-
     return render_template("admin_edit_module.html", module=module)
 
-# Admin add questions
+
+# -----------------------------
+# ADMIN QUESTION
+# -----------------------------
 @app.route('/admin_add_question', methods=['GET', 'POST'])
 @admin_required
 def admin_add_question():
@@ -1310,30 +1376,23 @@ def admin_add_question():
     if request.method == 'POST':
         subject_id = request.form['subject_id']
         assessment_type = request.form['assessment_type']
-        question_text = request.form['question_text']
-        correct_answer = request.form['correct_answer']
+        question_text = request.form['question_text'].strip()
+        correct_answer = request.form['correct_answer'].strip().upper()
         question_type = request.form['question_type']
 
-        option_a = request.form.get('option_a')
-        option_b = request.form.get('option_b')
-        option_c = request.form.get('option_c')
-        option_d = request.form.get('option_d')
+        option_a = request.form.get('option_a', '').strip()
+        option_b = request.form.get('option_b', '').strip()
+        option_c = request.form.get('option_c', '').strip()
+        option_d = request.form.get('option_d', '').strip()
 
         cursor.execute("""
-            INSERT INTO questions 
+            INSERT INTO questions
             (subject_id, assessment_type, question_text, correct_answer,
              question_type, option_a, option_b, option_c, option_d)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            subject_id,
-            assessment_type,
-            question_text,
-            correct_answer,
-            question_type,
-            option_a,
-            option_b,
-            option_c,
-            option_d
+            subject_id, assessment_type, question_text, correct_answer,
+            question_type, option_a, option_b, option_c, option_d
         ))
 
         conn.commit()
@@ -1344,53 +1403,47 @@ def admin_add_question():
         SELECT q.*, s.module_name
         FROM questions q
         JOIN subjects s ON q.subject_id = s.id
+        ORDER BY q.id ASC
     """)
     questions = cursor.fetchall()
 
+    cursor.close()
     conn.close()
-    return render_template('admin_add_question.html',
-                           modules=modules,
-                           questions=questions)
+    return render_template('admin_add_question.html', modules=modules, questions=questions)
 
-# Admin delete questions
+
 @app.route('/delete_question/<int:question_id>')
 @admin_required
 def delete_question(question_id):
-
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute("DELETE FROM questions WHERE id = %s", (question_id,))
-
     conn.commit()
+    cursor.close()
     conn.close()
-
     return redirect(url_for('admin_add_question'))
 
-# Admin edit questions
+
 @app.route('/edit_question/<int:question_id>', methods=['GET', 'POST'])
 @admin_required
 def edit_question(question_id):
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Get modules for dropdown
     cursor.execute("SELECT * FROM subjects")
     modules = cursor.fetchall()
 
     if request.method == 'POST':
-
         subject_id = request.form['subject_id']
         assessment_type = request.form['assessment_type']
-        question_text = request.form['question_text']
-        correct_answer = request.form['correct_answer']
+        question_text = request.form['question_text'].strip()
+        correct_answer = request.form['correct_answer'].strip().upper()
         question_type = request.form['question_type']
 
-        option_a = request.form.get('option_a')
-        option_b = request.form.get('option_b')
-        option_c = request.form.get('option_c')
-        option_d = request.form.get('option_d')
+        option_a = request.form.get('option_a', '').strip()
+        option_b = request.form.get('option_b', '').strip()
+        option_c = request.form.get('option_c', '').strip()
+        option_d = request.form.get('option_d', '').strip()
 
         cursor.execute("""
             UPDATE questions
@@ -1411,54 +1464,24 @@ def edit_question(question_id):
         ))
 
         conn.commit()
+        cursor.close()
         conn.close()
-
         return redirect(url_for('admin_add_question'))
 
-    # GET: fetch question
     cursor.execute("SELECT * FROM questions WHERE id = %s", (question_id,))
     question = cursor.fetchone()
 
+    cursor.close()
     conn.close()
-
-    return render_template(
-        'admin_edit_question.html',
-        question=question,
-        modules=modules
-    )
-
-def build_k_case_json(form):
-    correct_answer = form.get("k_correct_answer", "").strip().upper()
-
-    if correct_answer not in ["A", "B", "C", "D"]:
-        correct_answer = ""
-
-    case_data = {
-        "scenario": form.get("k_scenario", "").strip(),
-        "question": form.get("k_question", "").strip(),
-        "option_a": form.get("k_option_a", "").strip(),
-        "option_b": form.get("k_option_b", "").strip(),
-        "option_c": form.get("k_option_c", "").strip(),
-        "option_d": form.get("k_option_d", "").strip(),
-        "correct_answer": correct_answer
-    }
-    return json.dumps(case_data)
-
-def parse_k_case_json(content):
-    try:
-        return json.loads(content) if content else None
-    except:
-        return None
-    
-# Admin add material
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    return render_template('admin_edit_question.html', question=question, modules=modules)
 
 
+# -----------------------------
+# ADMIN MATERIAL
+# -----------------------------
 @app.route('/admin/add_material', methods=['GET', 'POST'])
 @admin_required
 def admin_add_material():
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -1466,35 +1489,29 @@ def admin_add_material():
     modules = cursor.fetchall()
 
     if request.method == 'POST':
-
         subject_id = request.form['subject_id']
-        title = request.form['title']
+        title = request.form['title'].strip()
         material_type = request.form['material_type']
         learning_style = request.form['learning_style']
 
         content = None
 
-        # TEXT
         if material_type == "text":
-            content = request.form.get('content')
+            content = request.form.get('content', '').strip()
 
-        # VIDEO
         elif material_type == "video":
-            raw_link = request.form.get('video_link')
+            raw_link = request.form.get('video_link', '').strip()
             content = convert_to_embed(raw_link) if raw_link else None
 
-        # PDF
         elif material_type == "pdf":
             file = request.files.get('pdf_file')
-
             if file and file.filename != "":
                 filename = secure_filename(file.filename)
                 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
-                content = filepath
+                content = filepath.replace("\\", "/")
 
-        # K CASE
         elif material_type == "k_case":
             content = build_k_case_json(request.form)
 
@@ -1519,35 +1536,24 @@ def admin_add_material():
     cursor.close()
     conn.close()
 
-    return render_template(
-        "admin_add_material.html",
-        modules=modules,
-        materials=materials
-    )
+    return render_template("admin_add_material.html", modules=modules, materials=materials)
 
 
-# Admin delete material
 @app.route('/delete_material/<int:material_id>')
 @admin_required
 def delete_material(material_id):
-
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute("DELETE FROM learning_materials WHERE id = %s", (material_id,))
-
     conn.commit()
     cursor.close()
     conn.close()
-
     return redirect(url_for('admin_add_material'))
 
 
-# Admin edit material
 @app.route('/edit_material/<int:material_id>', methods=['GET', 'POST'])
 @admin_required
 def edit_material(material_id):
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -1558,37 +1564,31 @@ def edit_material(material_id):
     material = cursor.fetchone()
 
     if request.method == 'POST':
-
         subject_id = request.form['subject_id']
-        title = request.form['title']
+        title = request.form['title'].strip()
         material_type = request.form['material_type']
         learning_style = request.form['learning_style']
 
         content = None
 
-        # TEXT
         if material_type == "text":
-            content = request.form.get('content')
+            content = request.form.get('content', '').strip()
 
-        # VIDEO
         elif material_type == "video":
-            raw_link = request.form.get('video_link')
+            raw_link = request.form.get('video_link', '').strip()
             content = convert_to_embed(raw_link) if raw_link else None
 
-        # PDF
         elif material_type == "pdf":
             file = request.files.get('pdf_file')
-
             if file and file.filename != "":
                 filename = secure_filename(file.filename)
                 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
-                content = filepath
+                content = filepath.replace("\\", "/")
             else:
                 content = material['content']
 
-        # K CASE
         elif material_type == "k_case":
             content = build_k_case_json(request.form)
 
@@ -1623,11 +1623,7 @@ def edit_material(material_id):
         k_case=k_case
     )
 
-# run for local
-#if __name__ == '__main__':
-#    app.run(debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true')
 
-# run for railway
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(
@@ -1635,4 +1631,3 @@ if __name__ == '__main__':
         port=port,
         debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     )
-
