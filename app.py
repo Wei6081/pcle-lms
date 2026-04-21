@@ -3,8 +3,7 @@ import json
 import os
 import re
 import secrets
-import smtplib
-from email.message import EmailMessage
+import requests
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -27,38 +26,46 @@ STYLE_MAP = {
 
 def send_reset_email(to_email, reset_link):
     try:
-        smtp_host = os.environ.get("MAIL_HOST")
-        smtp_port = int(str(os.environ.get("MAIL_PORT", "587")).strip())
-        smtp_user = os.environ.get("MAIL_USERNAME")
-        smtp_pass = os.environ.get("MAIL_PASSWORD")
-        mail_from = os.environ.get("MAIL_FROM", smtp_user)
+        api_key = os.environ.get("RESEND_API_KEY")
+        mail_from = os.environ.get("MAIL_FROM", "Acme <onboarding@resend.dev>")
         app_name = os.environ.get("MAIL_APP_NAME", "PCLE LMS")
 
-        if not smtp_host or not smtp_user or not smtp_pass:
-            return False, "Email config missing"
+        if not api_key:
+            return False, "Resend API key is missing."
 
-        msg = EmailMessage()
-        msg["Subject"] = f"{app_name} Password Reset"
-        msg["From"] = mail_from
-        msg["To"] = to_email
-        msg.set_content(f"""Reset your password:
+        subject = f"{app_name} Password Reset"
+        html_content = f"""
+        <p>Hello,</p>
+        <p>We received a request to reset your password for <strong>{app_name}</strong>.</p>
+        <p>Please click the link below to reset your password:</p>
+        <p><a href="{reset_link}">{reset_link}</a></p>
+        <p>This link will expire in 15 minutes and can only be used once.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+        <p>Regards,<br>{app_name}</p>
+        """
 
-{reset_link}
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": mail_from,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content
+            },
+            timeout=15
+        )
 
-Valid for 15 minutes.
-""")
+        if response.status_code in (200, 201):
+            return True, None
 
-        # 🔥 IMPORTANT FIX: add timeout
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
-
-        return True, None
+        return False, f"Resend error {response.status_code}: {response.text}"
 
     except Exception as e:
-        print("EMAIL ERROR:", str(e))
-        return False, str(e)
+        return False, f"Email sending failed: {str(e)}"
 
 
 def cleanup_old_reset_tokens():
