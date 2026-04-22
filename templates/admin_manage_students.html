@@ -47,7 +47,7 @@
             <th>Email</th>
             <th style="width:160px;">Learning Style</th>
             <th style="width:170px;">Completed Modules</th>
-            <th style="width:250px;">Actions</th>
+            <th style="width:260px;">Actions</th>
           </tr>
           {% for s in students %}
           <tr>
@@ -60,11 +60,11 @@
               <div class="action-group">
                 <a href="{{ url_for('admin_student_detail', user_id=s.user_id) }}" class="btn-view">View</a>
 
-                <form action="{{ url_for('admin_reset_student_all', user_id=s.user_id) }}" method="POST" style="display:inline;">
+                <form action="{{ url_for('admin_reset_student_all', user_id=s.user_id) }}" method="POST">
                   <button type="submit" class="btn-reset" onclick="return confirm('Reset all progress for this student?')">Reset</button>
                 </form>
 
-                <form action="{{ url_for('admin_delete_student', user_id=s.user_id) }}" method="POST" style="display:inline;">
+                <form action="{{ url_for('admin_delete_student', user_id=s.user_id) }}" method="POST">
                   <button type="submit" class="btn-delete" onclick="return confirm('Delete this student account completely?')">Delete</button>
                 </form>
               </div>

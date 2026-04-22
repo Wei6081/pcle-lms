@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Module</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
+</head>
+<body>
+<div class="page-container">
+  <header>
+    <div class="logo">🎓 PCLE LMS - Admin</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="admin-layout">
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
+      <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
+      <a href="{{ url_for('admin_manage_modules') }}">Manage Modules</a>
+      <a href="{{ url_for('admin_manage_questions') }}">Manage Questions</a>
+      <a href="{{ url_for('admin_manage_materials') }}">Manage Materials</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-panel">
+        <div class="top-bar">
+          <h1>Module Details</h1>
+          <a href="{{ url_for('admin_manage_modules') }}" class="btn-back">Back</a>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <strong>Module Name</strong>
+              <span>{{ module.module_name }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Total Questions</strong>
+              <span>{{ question_count }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Total Materials</strong>
+              <span>{{ material_count }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Module ID</strong>
+              <span>{{ module.id }}</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Description</h3>
+        <div class="long-text-box">{{ module.module_description or "-" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 PCLE LMS - Admin Panel</p>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Material</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
+</head>
+<body>
+<div class="page-container">
+  <header>
+    <div class="logo">🎓 PCLE LMS - Admin</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="admin-layout">
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
+      <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
+      <a href="{{ url_for('admin_manage_modules') }}">Manage Modules</a>
+      <a href="{{ url_for('admin_manage_questions') }}">Manage Questions</a>
+      <a href="{{ url_for('admin_manage_materials') }}">Manage Materials</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-panel">
+        <div class="top-bar">
+          <h1>Material Details</h1>
+          <a href="{{ url_for('admin_manage_materials') }}" class="btn-back">Back</a>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <strong>Module</strong>
+              <span>{{ material.module_name }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Title</strong>
+              <span>{{ material.title }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Learning Style</strong>
+              <span>{{ material.learning_style }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Material Type</strong>
+              <span>{{ material.material_type }}</span>
+            </div>
+          </div>
+        </div>
+
+        {% if material.material_type == 'pdf' %}
+          <h3>PDF File</h3>
+          <div class="long-text-box">{{ material.content }}</div>
+
+        {% elif material.material_type == 'video' %}
+          <h3>Video Link</h3>
+          <div class="long-text-box">{{ material.content }}</div>
+
+        {% elif material.material_type == 'text' %}
+          <h3>Text Content</h3>
+          <div class="long-text-box">{{ material.content }}</div>
+
+        {% elif material.material_type == 'k_case' and k_case %}
+          <h3>Case Study</h3>
+          <div class="detail-card">
+            <div class="detail-item">
+              <strong>Scenario</strong>
+              <p>{{ k_case.scenario }}</p>
+            </div>
+            <div class="detail-item" style="margin-top: 1rem;">
+              <strong>Question</strong>
+              <p>{{ k_case.question }}</p>
+            </div>
+          </div>
+
+          <h3>Options</h3>
+          <div class="detail-card">
+            <div class="detail-grid">
+              <div class="detail-item"><strong>Option A</strong><span>{{ k_case.option_a }}</span></div>
+              <div class="detail-item"><strong>Option B</strong><span>{{ k_case.option_b }}</span></div>
+              <div class="detail-item"><strong>Option C</strong><span>{{ k_case.option_c }}</span></div>
+              <div class="detail-item"><strong>Option D</strong><span>{{ k_case.option_d }}</span></div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="detail-item">
+              <strong>Correct Answer</strong>
+              <span>{{ k_case.correct_answer }}</span>
+            </div>
+          </div>
+        {% else %}
+          <div class="long-text-box">No material content found.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 PCLE LMS - Admin Panel</p>
+  </footer>
+</div>
+</body>
+</html>

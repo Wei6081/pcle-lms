@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Question</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
+</head>
+<body>
+<div class="page-container">
+  <header>
+    <div class="logo">🎓 PCLE LMS - Admin</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="admin-layout">
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
+      <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
+      <a href="{{ url_for('admin_manage_modules') }}">Manage Modules</a>
+      <a href="{{ url_for('admin_manage_questions') }}">Manage Questions</a>
+      <a href="{{ url_for('admin_manage_materials') }}">Manage Materials</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-panel">
+        <div class="top-bar">
+          <h1>Question Details</h1>
+          <a href="{{ url_for('admin_manage_questions') }}" class="btn-back">Back</a>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <strong>Module</strong>
+              <span>{{ question.module_name }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Assessment Type</strong>
+              <span>{{ question.assessment_type }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Question Type</strong>
+              <span>{{ question.question_type }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Correct Answer</strong>
+              <span>{{ question.correct_answer }}</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Question</h3>
+        <div class="long-text-box">{{ question.question_text }}</div>
+
+        <h3>Options</h3>
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item"><strong>Option A</strong><span>{{ question.option_a or "-" }}</span></div>
+            <div class="detail-item"><strong>Option B</strong><span>{{ question.option_b or "-" }}</span></div>
+            <div class="detail-item"><strong>Option C</strong><span>{{ question.option_c or "-" }}</span></div>
+            <div class="detail-item"><strong>Option D</strong><span>{{ question.option_d or "-" }}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 PCLE LMS - Admin Panel</p>
+  </footer>
+</div>
+</body>
+</html>

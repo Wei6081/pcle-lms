@@ -1218,6 +1218,42 @@ def edit_module(module_id):
     conn.close()
     return render_template("admin_edit_module.html", module=module)
 
+@app.route('/admin_module/<int:module_id>')
+@admin_required
+def admin_view_module(module_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT *
+        FROM subjects
+        WHERE id = %s
+    """, (module_id,))
+    module = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT COUNT(*) AS total_questions
+        FROM questions
+        WHERE subject_id = %s
+    """, (module_id,))
+    question_count = cursor.fetchone()["total_questions"]
+
+    cursor.execute("""
+        SELECT COUNT(*) AS total_materials
+        FROM learning_materials
+        WHERE subject_id = %s
+    """, (module_id,))
+    material_count = cursor.fetchone()["total_materials"]
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        "admin_view_module.html",
+        module=module,
+        question_count=question_count,
+        material_count=material_count
+    )
 
 # -----------------------------
 # ADMIN QUESTION
@@ -1357,6 +1393,24 @@ def edit_question(question_id):
     conn.close()
     return render_template('admin_edit_question.html', question=question, modules=modules)
 
+@app.route('/admin_question/<int:question_id>')
+@admin_required
+def admin_view_question(question_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT q.*, s.module_name
+        FROM questions q
+        JOIN subjects s ON q.subject_id = s.id
+        WHERE q.id = %s
+    """, (question_id,))
+    question = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("admin_view_question.html", question=question)
 
 # -----------------------------
 # ADMIN MATERIAL
@@ -1655,6 +1709,33 @@ def edit_material(material_id):
         'admin_edit_material.html',
         material=material,
         modules=modules,
+        k_case=k_case
+    )
+
+@app.route('/admin_material/<int:material_id>')
+@admin_required
+def admin_view_material(material_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT lm.*, s.module_name
+        FROM learning_materials lm
+        JOIN subjects s ON lm.subject_id = s.id
+        WHERE lm.id = %s
+    """, (material_id,))
+    material = cursor.fetchone()
+
+    k_case = None
+    if material and material['material_type'] == 'k_case':
+        k_case = parse_k_case_json(material['content'])
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        "admin_view_material.html",
+        material=material,
         k_case=k_case
     )
 
