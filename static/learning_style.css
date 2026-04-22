@@ -231,6 +231,14 @@ footer {
   margin-top: auto;
 }
 
+a.btn {
+  text-decoration: none !important;
+}
+
+a.btn:hover {
+  text-decoration: none !important;
+}
+
 
 /* Sidebar styling */
 /*.sidebar {

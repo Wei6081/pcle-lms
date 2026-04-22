@@ -27,6 +27,8 @@
     <div class="sidebar">
       <h2>Admin Panel</h2>
       <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
+      <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
       <a href="{{ url_for('admin_add_module') }}">Add Module</a>
       <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
       <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
@@ -76,7 +78,13 @@
           <input type="text" name="option_d">
 
           <label>Correct Answer</label>
-          <input type="text" name="correct_answer" required>
+          <select name="correct_answer" required>
+            <option value="">Select correct answer</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
 
           <button type="submit">Add Question</button>
         </form>

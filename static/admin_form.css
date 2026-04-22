@@ -236,3 +236,15 @@ footer {
     overflow-x: auto;
   }
 }
+
+
+td form {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+}
+
+td form button {
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}

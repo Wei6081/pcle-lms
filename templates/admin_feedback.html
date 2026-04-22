@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Feedback</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
+</head>
+<body>
+
+<div class="page-container">
+  <header>
+    <div class="logo">🎓 PCLE LMS - Admin</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="admin-layout">
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
+      <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
+      <a href="{{ url_for('admin_add_module') }}">Add Module</a>
+      <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
+      <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-panel">
+        <h1>Student Feedback</h1>
+
+        <table>
+          <tr>
+            <th>No</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Module</th>
+            <th>Helpfulness</th>
+            <th>Recommend</th>
+            <th>Comments</th>
+          </tr>
+          {% for row in feedback_rows %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ row.first_name }} {{ row.last_name }}</td>
+            <td>{{ row.email }}</td>
+            <td>{{ row.module_name }}</td>
+            <td>{{ row.helpfulness_score }}</td>
+            <td>{{ row.recommend_score }}</td>
+            <td>{{ row.comments }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 PCLE LMS - Admin Panel</p>
+  </footer>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Detail</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
+</head>
+<body>
+
+<div class="page-container">
+  <header>
+    <div class="logo">🎓 PCLE LMS - Admin</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="admin-layout">
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
+      <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
+      <a href="{{ url_for('admin_add_module') }}">Add Module</a>
+      <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
+      <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-panel">
+        <h1>Student Detail</h1>
+
+        {% if student %}
+          <p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>
+          <p><strong>Email:</strong> {{ student.email }}</p>
+          <p><strong>Learning Style:</strong> {{ student.learning_style or "Not set" }}</p>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <h2>Module Progress</h2>
+        <table>
+          <tr>
+            <th>Module</th>
+            <th>Pre Score</th>
+            <th>Final Score</th>
+            <th>Content Done</th>
+            <th>Helpfulness</th>
+            <th>Recommend</th>
+            <th>Comment</th>
+            <th>Action</th>
+          </tr>
+          {% for row in progress_rows %}
+          <tr>
+            <td>{{ row.module_name }}</td>
+            <td>{{ row.pre_score if row.pre_score is not none else "-" }}</td>
+            <td>{{ row.final_score if row.final_score is not none else "-" }}</td>
+            <td>{{ "Yes" if row.completed_content == 1 else "No" }}</td>
+            <td>{{ row.helpfulness_score if row.helpfulness_score is not none else "-" }}</td>
+            <td>{{ row.recommend_score if row.recommend_score is not none else "-" }}</td>
+            <td>{{ row.comments or "-" }}</td>
+            <td>
+              <form action="{{ url_for('admin_reset_student_module', user_id=student.user_id, subject_id=row.subject_id) }}" method="POST">
+                <button type="submit" onclick="return confirm('Reset this module progress?')">Reset Module</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 PCLE LMS - Admin Panel</p>
+  </footer>
+</div>
+
+</body>
+</html>

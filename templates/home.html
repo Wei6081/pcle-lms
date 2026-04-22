@@ -16,9 +16,10 @@
         <li class="{{ 'done' if session.get('subject_done') else '' }}">Step 1: Subject</li>
         <li class="{{ 'done' if session.get('preassessment_done') else '' }}">Step 2: Pre-Assessment</li>
         <li class="{{ 'done' if session.get('style_done') else '' }}">Step 3: Learning Style</li>
-        <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Modules</li>
+        <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Learning Content</li>
         <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
         <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
+        <li class="{{ 'done' if session.get('recommend_done') else '' }}">Step 7: Recommended Modules</li>
       </ul>
     </aside>
     {% endif %}
@@ -92,7 +93,7 @@
         </div>
 
         <div class="card">
-          <h3>Step 4: Learning Modules</h3>
+          <h3>Step 4: Learning Content</h3>
           {% if session.get('module_done') %}
             <span class="status done">Completed</span>
             <div class="card-action"><span class="btn-small disabled">Done</span></div>
@@ -129,6 +130,22 @@
             <div class="card-action"><span class="btn-small disabled">Locked</span></div>
           {% endif %}
         </div>
+
+        <div class="card">
+          <h3>Step 7: Recommended Modules</h3>
+          {% if session.get('result_done') %}
+            <span class="status done">Available</span>
+            <div class="card-action">
+              <a href="{{ url_for('recommended_module') }}" class="btn-small">View</a>
+            </div>
+          {% else %}
+            <span class="status">Locked</span>
+            <div class="card-action">
+              <span class="btn-small disabled">Locked</span>
+            </div>
+          {% endif %}
+        </div>
+
       </section>
 
       <section class="announcements">

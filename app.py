@@ -94,6 +94,7 @@ def initialize_progress_flags():
     session.setdefault('module_done', False)
     session.setdefault('assessment_done', False)
     session.setdefault('result_done', False)
+    session.setdefault('recommend_done', False)
 
 
 def get_subject_id_by_name(module_name):
@@ -177,12 +178,14 @@ def sync_progress_flags(user_id=None):
             session['module_done'] = bool(progress and progress.get('completed_content') == 1)
             session['assessment_done'] = bool(progress and progress.get('final_score') is not None)
             session['result_done'] = bool(progress and progress.get('final_score') is not None)
+            session['recommend_done'] = bool(progress and progress.get('final_score') is not None)
         else:
             session['subject_done'] = False
             session['preassessment_done'] = False
             session['module_done'] = False
             session['assessment_done'] = False
             session['result_done'] = False
+            session['recommend_done'] = False
 
         cursor.close()
         conn.close()
@@ -1131,14 +1134,19 @@ def admin_add_module():
         module_name = request.form['module_name'].strip()
         module_description = request.form['module_description'].strip()
 
-        cursor.execute("""
-            INSERT INTO subjects (module_name, module_description)
-            VALUES (%s, %s)
-        """, (module_name, module_description))
+        cursor.execute("SELECT id FROM subjects WHERE module_name = %s", (module_name,))
+        existing_module = cursor.fetchone()
 
-        conn.commit()
-        flash("Module added successfully!", "success")
-        return redirect(url_for('admin_add_module'))
+        if existing_module:
+            flash("Module name already exists. Please use a different name.", "error")
+        else:
+            cursor.execute("""
+                INSERT INTO subjects (module_name, module_description)
+                VALUES (%s, %s)
+            """, (module_name, module_description))
+            conn.commit()
+            flash("Module added successfully!", "success")
+            return redirect(url_for('admin_add_module'))
 
     cursor.execute("SELECT * FROM subjects ORDER BY id ASC")
     modules = cursor.fetchall()
@@ -1171,15 +1179,25 @@ def edit_module(module_id):
         module_description = request.form['module_description'].strip()
 
         cursor.execute("""
-            UPDATE subjects
-            SET module_name=%s, module_description=%s
-            WHERE id=%s
-        """, (module_name, module_description, module_id))
+            SELECT id FROM subjects
+            WHERE module_name = %s AND id != %s
+        """, (module_name, module_id))
+        existing_module = cursor.fetchone()
 
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return redirect(url_for('admin_add_module'))
+        if existing_module:
+            flash("Another module already uses this name.", "error")
+        else:
+            cursor.execute("""
+                UPDATE subjects
+                SET module_name=%s, module_description=%s
+                WHERE id=%s
+            """, (module_name, module_description, module_id))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash("Module updated successfully!", "success")
+            return redirect(url_for('admin_add_module'))
 
     cursor.execute("SELECT * FROM subjects WHERE id=%s", (module_id,))
     module = cursor.fetchone()
@@ -1213,19 +1231,24 @@ def admin_add_question():
         option_c = request.form.get('option_c', '').strip()
         option_d = request.form.get('option_d', '').strip()
 
-        cursor.execute("""
-            INSERT INTO questions
-            (subject_id, assessment_type, question_text, correct_answer,
-             question_type, option_a, option_b, option_c, option_d)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            subject_id, assessment_type, question_text, correct_answer,
-            question_type, option_a, option_b, option_c, option_d
-        ))
+        allowed_answers = ["A", "B"] if question_type == "tf" else ["A", "B", "C", "D"]
 
-        conn.commit()
-        flash("Question added successfully!", "success")
-        return redirect(url_for('admin_add_question'))
+        if correct_answer not in allowed_answers:
+            flash("Invalid correct answer for selected question type.", "error")
+        else:
+            cursor.execute("""
+                INSERT INTO questions
+                (subject_id, assessment_type, question_text, correct_answer,
+                 question_type, option_a, option_b, option_c, option_d)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                subject_id, assessment_type, question_text, correct_answer,
+                question_type, option_a, option_b, option_c, option_d
+            ))
+
+            conn.commit()
+            flash("Question added successfully!", "success")
+            return redirect(url_for('admin_add_question'))
 
     cursor.execute("""
         SELECT q.*, s.module_name
@@ -1273,28 +1296,34 @@ def edit_question(question_id):
         option_c = request.form.get('option_c', '').strip()
         option_d = request.form.get('option_d', '').strip()
 
-        cursor.execute("""
-            UPDATE questions
-            SET subject_id=%s,
-                assessment_type=%s,
-                question_text=%s,
-                correct_answer=%s,
-                question_type=%s,
-                option_a=%s,
-                option_b=%s,
-                option_c=%s,
-                option_d=%s
-            WHERE id=%s
-        """, (
-            subject_id, assessment_type, question_text, correct_answer,
-            question_type, option_a, option_b, option_c, option_d,
-            question_id
-        ))
+        allowed_answers = ["A", "B"] if question_type == "tf" else ["A", "B", "C", "D"]
 
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return redirect(url_for('admin_add_question'))
+        if correct_answer not in allowed_answers:
+            flash("Invalid correct answer for selected question type.", "error")
+        else:
+            cursor.execute("""
+                UPDATE questions
+                SET subject_id=%s,
+                    assessment_type=%s,
+                    question_text=%s,
+                    correct_answer=%s,
+                    question_type=%s,
+                    option_a=%s,
+                    option_b=%s,
+                    option_c=%s,
+                    option_d=%s
+                WHERE id=%s
+            """, (
+                subject_id, assessment_type, question_text, correct_answer,
+                question_type, option_a, option_b, option_c, option_d,
+                question_id
+            ))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash("Question updated successfully!", "success")
+            return redirect(url_for('admin_add_question'))
 
     cursor.execute("SELECT * FROM questions WHERE id = %s", (question_id,))
     question = cursor.fetchone()
@@ -1450,6 +1479,191 @@ def edit_material(material_id):
         modules=modules,
         k_case=k_case
     )
+
+# -----------------------------
+# ADMIN STUDENT MANAGEMENT
+# -----------------------------
+@app.route('/admin_manage_students')
+@admin_required
+def admin_manage_students():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT 
+            u.id AS user_id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            s.learning_style,
+            COUNT(DISTINCT CASE WHEN mp.final_score IS NOT NULL THEN mp.subject_id END) AS completed_modules
+        FROM users u
+        JOIN students s ON u.id = s.user_id
+        LEFT JOIN module_progress mp ON u.id = mp.user_id
+        GROUP BY u.id, u.first_name, u.last_name, u.email, s.learning_style
+        ORDER BY u.id ASC
+    """)
+    students = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("admin_manage_students.html", students=students)
+
+
+@app.route('/admin_student/<int:user_id>')
+@admin_required
+def admin_student_detail(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT 
+            u.id AS user_id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            s.learning_style
+        FROM users u
+        JOIN students s ON u.id = s.user_id
+        WHERE u.id = %s
+    """, (user_id,))
+    student = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT 
+            sub.id AS subject_id,
+            sub.module_name,
+            mp.pre_score,
+            mp.final_score,
+            mp.completed_content,
+            mp.helpfulness_score,
+            mp.recommend_score,
+            mp.comments,
+            mp.completed_at
+        FROM subjects sub
+        LEFT JOIN module_progress mp
+            ON sub.id = mp.subject_id AND mp.user_id = %s
+        ORDER BY sub.id ASC
+    """, (user_id,))
+    progress_rows = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        "admin_student_detail.html",
+        student=student,
+        progress_rows=progress_rows
+    )
+
+
+@app.route('/admin_reset_student_module/<int:user_id>/<int:subject_id>', methods=['POST'])
+@admin_required
+def admin_reset_student_module(user_id, subject_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # remove module progress for this student + module
+    cursor.execute("""
+        DELETE FROM module_progress
+        WHERE user_id = %s AND subject_id = %s
+    """, (user_id, subject_id))
+
+    # remove feedback for same module
+    cursor.execute("""
+        DELETE f
+        FROM feedback f
+        JOIN subjects s ON f.module_name = s.module_name
+        WHERE f.user_id = %s AND s.id = %s
+    """, (user_id, subject_id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash("Student module progress reset successfully.", "success")
+    return redirect(url_for('admin_student_detail', user_id=user_id))
+
+
+@app.route('/admin_reset_student_all/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_reset_student_all(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM module_progress
+        WHERE user_id = %s
+    """, (user_id,))
+
+    cursor.execute("""
+        DELETE FROM feedback
+        WHERE user_id = %s
+    """, (user_id,))
+
+    cursor.execute("""
+        UPDATE students
+        SET learning_style = NULL
+        WHERE user_id = %s
+    """, (user_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash("Student full learning journey reset successfully.", "success")
+    return redirect(url_for('admin_manage_students'))
+
+
+@app.route('/admin_delete_student/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_delete_student(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM module_progress WHERE user_id = %s", (user_id,))
+    cursor.execute("DELETE FROM feedback WHERE user_id = %s", (user_id,))
+    cursor.execute("DELETE FROM students WHERE user_id = %s", (user_id,))
+    cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash("Student deleted successfully.", "success")
+    return redirect(url_for('admin_manage_students'))
+
+
+# -----------------------------
+# ADMIN FEEDBACK VIEW
+# -----------------------------
+@app.route('/admin_feedback')
+@admin_required
+def admin_feedback():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT 
+            f.id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            f.module_name,
+            f.helpfulness_score,
+            f.recommend_score,
+            f.comments
+        FROM feedback f
+        JOIN users u ON f.user_id = u.id
+        ORDER BY f.id DESC
+    """)
+    feedback_rows = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("admin_feedback.html", feedback_rows=feedback_rows)
 
 
 if __name__ == '__main__':

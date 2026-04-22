@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Students</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
+</head>
+<body>
+
+<div class="page-container">
+  <header>
+    <div class="logo">🎓 PCLE LMS - Admin</div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="admin-layout">
+    <div class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="{{ url_for('admin_home') }}">Dashboard</a>
+      <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
+      <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
+      <a href="{{ url_for('admin_add_module') }}">Add Module</a>
+      <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
+      <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
+    </div>
+
+    <div class="content">
+      <div class="admin-panel">
+        <h1>Manage Students</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <table>
+          <tr>
+            <th>No</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Learning Style</th>
+            <th>Completed Modules</th>
+            <th>Actions</th>
+          </tr>
+          {% for s in students %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ s.first_name }} {{ s.last_name }}</td>
+            <td>{{ s.email }}</td>
+            <td>{{ s.learning_style or "Not set" }}</td>
+            <td>{{ s.completed_modules }}</td>
+            <td>
+              <a href="{{ url_for('admin_student_detail', user_id=s.user_id) }}" class="btn-edit">View</a>
+
+              <form action="{{ url_for('admin_reset_student_all', user_id=s.user_id) }}" method="POST" style="display:inline;">
+                <button type="submit" onclick="return confirm('Reset all progress for this student?')">Reset All</button>
+              </form>
+
+              <form action="{{ url_for('admin_delete_student', user_id=s.user_id) }}" method="POST" style="display:inline;">
+                <button type="submit" onclick="return confirm('Delete this student account completely?')">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 PCLE LMS - Admin Panel</p>
+  </footer>
+</div>
+
+</body>
+</html>
