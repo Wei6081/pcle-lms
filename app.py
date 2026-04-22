@@ -492,60 +492,96 @@ def learning_style():
     """, (user_id, subject_id))
     progress_row = cursor.fetchone()
 
-    cursor.close()
-    conn.close()
+    cursor.execute("""
+        SELECT learning_style
+        FROM students
+        WHERE user_id = %s
+    """, (user_id,))
+    student_row = cursor.fetchone()
 
-    saved_style = None
-    saved_style_full = None
-    saved_icon = "🎓"
-    saved_description = ""
-    preferred_content = ""
+    style_info = {
+        "V": {
+            "icon": "👁️",
+            "title": "Visual Learner",
+            "description": "You usually learn better through diagrams, charts, images, and visual examples.",
+            "preferred_content": "Visual materials such as slide notes, diagrams and illustrated content"
+        },
+        "A": {
+            "icon": "🎧",
+            "title": "Auditory Learner",
+            "description": "You usually learn better through listening, discussion, and spoken explanation.",
+            "preferred_content": "Audio or video-based learning materials"
+        },
+        "R": {
+            "icon": "📘",
+            "title": "Reading/Writing Learner",
+            "description": "You usually learn better through reading and writing, such as notes, text explanations, and guides.",
+            "preferred_content": "Text-rich materials such as notes, articles and written explanations"
+        },
+        "K": {
+            "icon": "🛠️",
+            "title": "Kinesthetic Learner",
+            "description": "You usually learn better through practice, hands-on activities, and learning by doing.",
+            "preferred_content": "Practical tasks, activities and interactive learning content"
+        }
+    }
 
     if progress_row and progress_row.get("learning_style"):
         saved_style = progress_row["learning_style"]
         saved_style_full = STYLE_MAP.get(saved_style, saved_style)
-
-        style_info = {
-            "V": {
-                "icon": "👁️",
-                "description": "You usually learn better through diagrams, charts, images, and visual examples.",
-                "preferred_content": "Visual materials such as slide notes, diagrams and illustrated content"
-            },
-            "A": {
-                "icon": "🎧",
-                "description": "You usually learn better through listening, discussion, and spoken explanation.",
-                "preferred_content": "Audio or video-based learning materials"
-            },
-            "R": {
-                "icon": "📘",
-                "description": "You usually learn better through reading and writing, such as notes, text explanations, and guides.",
-                "preferred_content": "Text-rich materials such as notes, articles and written explanations"
-            },
-            "K": {
-                "icon": "🛠️",
-                "description": "You usually learn better through practice, hands-on activities, and learning by doing.",
-                "preferred_content": "Practical tasks, activities and interactive learning content"
-            }
-        }
-
-        if saved_style in style_info:
-            saved_icon = style_info[saved_style]["icon"]
-            saved_description = style_info[saved_style]["description"]
-            preferred_content = style_info[saved_style]["preferred_content"]
+        info = style_info.get(saved_style, {})
 
         session['learning_style'] = saved_style
         session['learning_style_full'] = saved_style_full
         session['style_done'] = True
+
+        cursor.close()
+        conn.close()
 
         return render_template(
             'learning_style.html',
             locked=True,
             saved_style=saved_style,
             saved_style_full=saved_style_full,
-            saved_icon=saved_icon,
-            saved_description=saved_description,
-            preferred_content=preferred_content
+            saved_icon=info.get("icon", "🎓"),
+            saved_description=info.get("description", ""),
+            preferred_content=info.get("preferred_content", "")
         )
+
+    if student_row and student_row.get("learning_style"):
+        saved_style = student_row["learning_style"]
+
+        cursor2 = conn.cursor()
+        cursor2.execute("""
+            UPDATE module_progress
+            SET learning_style = %s
+            WHERE user_id = %s AND subject_id = %s
+        """, (saved_style, user_id, subject_id))
+        conn.commit()
+        cursor2.close()
+
+        saved_style_full = STYLE_MAP.get(saved_style, saved_style)
+        info = style_info.get(saved_style, {})
+
+        session['learning_style'] = saved_style
+        session['learning_style_full'] = saved_style_full
+        session['style_done'] = True
+
+        cursor.close()
+        conn.close()
+
+        return render_template(
+            'learning_style.html',
+            locked=True,
+            saved_style=saved_style,
+            saved_style_full=saved_style_full,
+            saved_icon=info.get("icon", "🎓"),
+            saved_description=info.get("description", ""),
+            preferred_content=info.get("preferred_content", "")
+        )
+
+    cursor.close()
+    conn.close()
 
     return render_template(
         'learning_style.html',

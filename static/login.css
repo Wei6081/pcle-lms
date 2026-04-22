@@ -175,12 +175,22 @@ input[type="password"]:focus {
   }
 }
 
-.forgot-link {
-  color: #1abc9c;
-  text-decoration: none;
-  font-size: 14px;
+
+
+.password-wrapper {
+  position: relative;
 }
 
-.forgot-link:hover {
-  text-decoration: underline;
+.password-wrapper input {
+  padding-right: 45px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 18px;
+  user-select: none;
 }

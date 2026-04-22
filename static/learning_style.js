@@ -25,6 +25,33 @@ document.addEventListener("DOMContentLoaded", () => {
     "K": "K"
   };
 
+  const styleInfo = {
+    "Visual": {
+      icon: "👁️",
+      title: "Visual Learner",
+      description: "You usually learn better through diagrams, charts, images, and visual examples.",
+      preferred: "Visual materials such as slide notes, diagrams and illustrated content"
+    },
+    "Auditory": {
+      icon: "🎧",
+      title: "Auditory Learner",
+      description: "You usually learn better through listening, discussion, and spoken explanation.",
+      preferred: "Audio or video-based learning materials"
+    },
+    "Reading/Writing": {
+      icon: "📘",
+      title: "Reading/Writing Learner",
+      description: "You usually learn better through reading and writing, such as notes, text explanations, and guides.",
+      preferred: "Text-rich materials such as notes, articles and written explanations"
+    },
+    "Kinesthetic": {
+      icon: "🛠️",
+      title: "Kinesthetic Learner",
+      description: "You usually learn better through practice, hands-on activities, and learning by doing.",
+      preferred: "Practical tasks, activities and interactive learning content"
+    }
+  };
+
   function showMainOptions() {
     if (varkForm) varkForm.classList.add("hidden");
     if (selectStyle) selectStyle.classList.add("hidden");
@@ -35,6 +62,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function showBackButton() {
     backBtn.classList.remove("hidden");
+  }
+
+  function showResultCard(styleName) {
+    const info = styleInfo[styleName];
+    resultBox.innerHTML = `
+      <div class="result-box" style="display:block;">
+        <div style="font-size:3rem; margin-bottom:10px;">${info.icon}</div>
+        <h3 style="margin-bottom:10px;">Your Learning Style Result</h3>
+        <h2 style="margin-top:0; margin-bottom:15px;">${info.title}</h2>
+        <p style="margin-bottom:12px;">${info.description}</p>
+        <p style="margin-bottom:18px;"><strong>Preferred content format:</strong> ${info.preferred}</p>
+        <button type="button" class="btn" id="continueToContentBtn">Continue to Learning Content</button>
+      </div>
+    `;
+
+    document.getElementById("continueToContentBtn").addEventListener("click", () => {
+      window.location.href = "/content";
+    });
   }
 
   if (takeQuizBtn) {
@@ -83,8 +128,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (topStyles.length === 1) {
         const finalStyle = topStyles[0];
-        resultBox.innerHTML = `✅ Your dominant learning style is <strong>${finalStyle}</strong>.`;
-        await saveLearningStyleAndRedirect(styleMap[finalStyle]);
+        await saveLearningStyle(styleMap[finalStyle]);
+        showResultCard(finalStyle);
       } else {
         showTieSelection(topStyles);
       }
@@ -101,11 +146,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      resultBox.innerHTML = `🎯 You selected <strong>${style}</strong> as your learning style.`;
       if (selectStyle) selectStyle.classList.add("hidden");
       showBackButton();
 
-      await saveLearningStyleAndRedirect(styleMap[style]);
+      await saveLearningStyle(styleMap[style]);
+      showResultCard(style);
     });
   }
 
@@ -124,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div>
         <p><strong>You have mixed preferences:</strong> ${topStyles.join(" and ")}</p>
         <p>Please choose the learning style that best matches how you prefer to learn.</p>
-        <div style="margin-top: 15px;">
+        <div style="margin-top:15px;">
           ${buttonsHtml}
         </div>
       </div>
@@ -134,40 +179,27 @@ document.addEventListener("DOMContentLoaded", () => {
     tieButtons.forEach(button => {
       button.addEventListener("click", async () => {
         const chosenStyle = button.dataset.style;
-        resultBox.innerHTML = `
-          ✅ You have mixed preferences, and you selected
-          <strong>${chosenStyle}</strong> as your learning style.
-        `;
-        await saveLearningStyleAndRedirect(styleMap[chosenStyle]);
+        await saveLearningStyle(styleMap[chosenStyle]);
+        showResultCard(chosenStyle);
       });
     });
   }
 
-  async function saveLearningStyleAndRedirect(abbrevStyle) {
-    try {
-      const res = await fetch("/save_learning_style", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          learningStyle: abbrevStyle
-        })
-      });
+  async function saveLearningStyle(abbrevStyle) {
+    const res = await fetch("/save_learning_style", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        learningStyle: abbrevStyle
+      })
+    });
 
-      const json = await res.json();
+    const json = await res.json();
 
-      if (!res.ok) {
-        throw new Error(json.message || "Unable to save learning style.");
-      }
-
-      setTimeout(() => {
-        window.location.href = "/content";
-      }, 1200);
-
-    } catch (err) {
-      console.error("Error saving learning style:", err);
-      alert(err.message || "Unable to save learning style. Please try again.");
+    if (!res.ok) {
+      throw new Error(json.message || "Unable to save learning style.");
     }
   }
 });

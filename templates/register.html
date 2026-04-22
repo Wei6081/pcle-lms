@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PCLE LMS Register</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
 </head>
 <body>
 
-  <!-- HEADER -->
   <header>
     <div class="logo">🎓 PCLE LMS</div>
     <nav>
@@ -19,7 +17,6 @@
     </nav>
   </header>
 
-  <!-- REGISTER CARD -->
   <div class="register-container">
     <div class="register-card">
 
@@ -51,27 +48,21 @@
           <input type="text" id="last_name" name="last_name" required>
         </div>
 
-        <div class="form-group">
+        <div class="form-group password-group">
           <label for="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            minlength="6"
-            required
-          >
+          <div class="password-wrapper">
+            <input type="password" id="password" name="password" minlength="6" required>
+            <span class="toggle-password" onclick="togglePassword('password', this)">👁</span>
+          </div>
           <small class="hint">Password must be at least 6 characters.</small>
         </div>
 
-        <div class="form-group">
+        <div class="form-group password-group">
           <label for="confirm_password">Confirm Password</label>
-          <input
-            type="password"
-            id="confirm_password"
-            name="confirm_password"
-            minlength="6"
-            required
-          >
+          <div class="password-wrapper">
+            <input type="password" id="confirm_password" name="confirm_password" minlength="6" required>
+            <span class="toggle-password" onclick="togglePassword('confirm_password', this)">👁</span>
+          </div>
           <small id="password-error" class="password-error"></small>
         </div>
 
@@ -86,13 +77,23 @@
     </div>
   </div>
 
-
   <script>
     const form = document.getElementById("registerForm");
     const password = document.getElementById("password");
     const confirmPassword = document.getElementById("confirm_password");
     const passwordError = document.getElementById("password-error");
     const registerBtn = document.getElementById("registerBtn");
+
+    function togglePassword(id, icon) {
+      const input = document.getElementById(id);
+      if (input.type === "password") {
+        input.type = "text";
+        icon.textContent = "🙈";
+      } else {
+        input.type = "password";
+        icon.textContent = "👁";
+      }
+    }
 
     function validatePasswords() {
       const pass = password.value;
@@ -137,6 +138,5 @@
     });
   </script>
 
-  
 </body>
 </html>
