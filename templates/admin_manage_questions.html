@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Manage Students</title>
+  <title>Manage Questions</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
 </head>
 <body>
@@ -30,7 +30,10 @@
 
     <div class="content">
       <div class="admin-panel">
-        <h1>Manage Students</h1>
+        <div class="top-bar">
+          <h1>Manage Questions</h1>
+          <a href="{{ url_for('admin_add_question') }}" class="btn-add">Add Question</a>
+        </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -43,30 +46,27 @@
         <table>
           <tr>
             <th style="width:55px;">No</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th style="width:160px;">Learning Style</th>
-            <th style="width:170px;">Completed Modules</th>
-            <th style="width:250px;">Actions</th>
+            <th style="width:160px;">Module</th>
+            <th style="width:80px;">Type</th>
+            <th>Question</th>
+            <th style="width:130px;">Question Type</th>
+            <th style="width:90px;">Answer</th>
+            <th style="width:180px;">Actions</th>
           </tr>
-          {% for s in students %}
+          {% for q in questions %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td>{{ s.first_name }} {{ s.last_name }}</td>
-            <td>{{ s.email }}</td>
-            <td>{{ s.learning_style or "Not set" }}</td>
-            <td>{{ s.completed_modules }}</td>
+            <td>{{ q.module_name }}</td>
+            <td>{{ q.assessment_type }}</td>
+            <td class="preview-text">{{ q.question_text }}</td>
+            <td>{{ q.question_type }}</td>
+            <td>{{ q.correct_answer }}</td>
             <td class="actions-cell">
               <div class="action-group">
-                <a href="{{ url_for('admin_student_detail', user_id=s.user_id) }}" class="btn-view">View</a>
-
-                <form action="{{ url_for('admin_reset_student_all', user_id=s.user_id) }}" method="POST" style="display:inline;">
-                  <button type="submit" class="btn-reset" onclick="return confirm('Reset all progress for this student?')">Reset</button>
-                </form>
-
-                <form action="{{ url_for('admin_delete_student', user_id=s.user_id) }}" method="POST" style="display:inline;">
-                  <button type="submit" class="btn-delete" onclick="return confirm('Delete this student account completely?')">Delete</button>
-                </form>
+                <a href="{{ url_for('edit_question', question_id=q.id) }}" class="btn-edit">Edit</a>
+                <a href="{{ url_for('delete_question', question_id=q.id) }}"
+                   onclick="return confirm('Are you sure you want to delete this question?');"
+                   class="btn-delete">Delete</a>
               </div>
             </td>
           </tr>

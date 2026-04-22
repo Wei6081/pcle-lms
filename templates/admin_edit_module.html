@@ -8,8 +8,6 @@
 <body>
 
 <div class="page-container">
-
-  <!-- HEADER -->
   <header>
     <div class="logo">🎓 PCLE LMS - Admin</div>
     <nav>
@@ -19,28 +17,30 @@
     </nav>
   </header>
 
-  <!-- MAIN LAYOUT -->
   <div class="admin-layout">
-
-    <!-- SIDEBAR -->
     <div class="sidebar">
       <h2>Admin Panel</h2>
       <a href="{{ url_for('admin_home') }}">Dashboard</a>
       <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
       <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
-      <a href="{{ url_for('admin_add_module') }}">Add Module</a>
-      <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
-      <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
+      <a href="{{ url_for('admin_manage_modules') }}">Manage Modules</a>
+      <a href="{{ url_for('admin_manage_questions') }}">Manage Questions</a>
+      <a href="{{ url_for('admin_manage_materials') }}">Manage Materials</a>
     </div>
 
-    <!-- CONTENT -->
     <div class="content">
       <div class="admin-panel">
-
         <h1>Edit Module</h1>
 
-        <form method="POST">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
+        <form method="POST">
           <label>Module Name</label>
           <input type="text" name="module_name" value="{{ module.module_name }}" required>
 
@@ -48,19 +48,15 @@
           <textarea name="module_description">{{ module.module_description }}</textarea>
 
           <button type="submit">Update</button>
-
         </form>
 
       </div>
     </div>
-
   </div>
 
-  <!-- FOOTER -->
   <footer>
     <p>© 2026 PCLE LMS - Admin Panel</p>
   </footer>
-
 </div>
 
 </body>

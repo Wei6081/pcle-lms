@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Manage Students</title>
+  <title>Manage Materials</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='admin_form.css') }}">
 </head>
 <body>
@@ -30,7 +30,10 @@
 
     <div class="content">
       <div class="admin-panel">
-        <h1>Manage Students</h1>
+        <div class="top-bar">
+          <h1>Manage Materials</h1>
+          <a href="{{ url_for('admin_add_material') }}" class="btn-add">Add Material</a>
+        </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -43,30 +46,39 @@
         <table>
           <tr>
             <th style="width:55px;">No</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th style="width:160px;">Learning Style</th>
-            <th style="width:170px;">Completed Modules</th>
-            <th style="width:250px;">Actions</th>
+            <th style="width:180px;">Module</th>
+            <th style="width:70px;">Style</th>
+            <th style="width:180px;">Title</th>
+            <th style="width:120px;">Type</th>
+            <th>Content Preview</th>
+            <th style="width:180px;">Actions</th>
           </tr>
-          {% for s in students %}
+          {% for m in materials %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td>{{ s.first_name }} {{ s.last_name }}</td>
-            <td>{{ s.email }}</td>
-            <td>{{ s.learning_style or "Not set" }}</td>
-            <td>{{ s.completed_modules }}</td>
+            <td>{{ m.module_name }}</td>
+            <td>{{ m.learning_style }}</td>
+            <td>{{ m.title }}</td>
+            <td>{{ m.material_type }}</td>
+            <td class="preview-text">
+              {% if m.material_type == 'pdf' %}
+                PDF uploaded
+              {% elif m.material_type == 'video' %}
+                YouTube video
+              {% elif m.material_type == 'text' %}
+                {{ m.content[:90] }}{% if m.content and m.content|length > 90 %}...{% endif %}
+              {% elif m.material_type == 'k_case' %}
+                Case study MCQ
+              {% else %}
+                -
+              {% endif %}
+            </td>
             <td class="actions-cell">
               <div class="action-group">
-                <a href="{{ url_for('admin_student_detail', user_id=s.user_id) }}" class="btn-view">View</a>
-
-                <form action="{{ url_for('admin_reset_student_all', user_id=s.user_id) }}" method="POST" style="display:inline;">
-                  <button type="submit" class="btn-reset" onclick="return confirm('Reset all progress for this student?')">Reset</button>
-                </form>
-
-                <form action="{{ url_for('admin_delete_student', user_id=s.user_id) }}" method="POST" style="display:inline;">
-                  <button type="submit" class="btn-delete" onclick="return confirm('Delete this student account completely?')">Delete</button>
-                </form>
+                <a href="{{ url_for('edit_material', material_id=m.id) }}" class="btn-edit">Edit</a>
+                <a href="{{ url_for('delete_material', material_id=m.id) }}"
+                   onclick="return confirm('Are you sure you want to delete this material?');"
+                   class="btn-delete">Delete</a>
               </div>
             </td>
           </tr>

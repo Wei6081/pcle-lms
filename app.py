@@ -301,7 +301,7 @@ def logout():
     flash("Logged out successfully.", "success")
     return redirect(url_for('home'))
 
-
+#admin login
 @app.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
@@ -1125,6 +1125,18 @@ def admin_home():
 # -----------------------------
 # ADMIN MODULE
 # -----------------------------
+@app.route('/admin_modules')
+@admin_required
+def admin_manage_modules():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM subjects ORDER BY id ASC")
+    modules = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('admin_manage_modules.html', modules=modules)
+
+
 @app.route('/admin_add_module', methods=['GET', 'POST'])
 @admin_required
 def admin_add_module():
@@ -1147,14 +1159,13 @@ def admin_add_module():
             """, (module_name, module_description))
             conn.commit()
             flash("Module added successfully!", "success")
-            return redirect(url_for('admin_add_module'))
-
-    cursor.execute("SELECT * FROM subjects ORDER BY id ASC")
-    modules = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return redirect(url_for('admin_manage_modules'))
 
     cursor.close()
     conn.close()
-    return render_template('admin_add_module.html', modules=modules)
+    return render_template('admin_add_module.html')
 
 
 @app.route('/delete_module/<int:module_id>')
@@ -1166,7 +1177,7 @@ def delete_module(module_id):
     conn.commit()
     cursor.close()
     conn.close()
-    return redirect(url_for('admin_add_module'))
+    return redirect(url_for('admin_manage_modules'))
 
 
 @app.route('/edit_module/<int:module_id>', methods=['GET', 'POST'])
@@ -1198,7 +1209,7 @@ def edit_module(module_id):
             cursor.close()
             conn.close()
             flash("Module updated successfully!", "success")
-            return redirect(url_for('admin_add_module'))
+            return redirect(url_for('admin_manage_modules'))
 
     cursor.execute("SELECT * FROM subjects WHERE id=%s", (module_id,))
     module = cursor.fetchone()
@@ -1211,6 +1222,25 @@ def edit_module(module_id):
 # -----------------------------
 # ADMIN QUESTION
 # -----------------------------
+@app.route('/admin_questions')
+@admin_required
+def admin_manage_questions():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT q.*, s.module_name
+        FROM questions q
+        JOIN subjects s ON q.subject_id = s.id
+        ORDER BY q.id ASC
+    """)
+    questions = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return render_template('admin_manage_questions.html', questions=questions)
+
+
 @app.route('/admin_add_question', methods=['GET', 'POST'])
 @admin_required
 def admin_add_question():
@@ -1249,19 +1279,13 @@ def admin_add_question():
 
             conn.commit()
             flash("Question added successfully!", "success")
-            return redirect(url_for('admin_add_question'))
-
-    cursor.execute("""
-        SELECT q.*, s.module_name
-        FROM questions q
-        JOIN subjects s ON q.subject_id = s.id
-        ORDER BY q.id ASC
-    """)
-    questions = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return redirect(url_for('admin_manage_questions'))
 
     cursor.close()
     conn.close()
-    return render_template('admin_add_question.html', modules=modules, questions=questions)
+    return render_template('admin_add_question.html', modules=modules)
 
 
 @app.route('/delete_question/<int:question_id>')
@@ -1273,7 +1297,7 @@ def delete_question(question_id):
     conn.commit()
     cursor.close()
     conn.close()
-    return redirect(url_for('admin_add_question'))
+    return redirect(url_for('admin_manage_questions'))
 
 
 @app.route('/edit_question/<int:question_id>', methods=['GET', 'POST'])
@@ -1324,7 +1348,7 @@ def edit_question(question_id):
             cursor.close()
             conn.close()
             flash("Question updated successfully!", "success")
-            return redirect(url_for('admin_add_question'))
+            return redirect(url_for('admin_manage_questions'))
 
     cursor.execute("SELECT * FROM questions WHERE id = %s", (question_id,))
     question = cursor.fetchone()
@@ -1337,51 +1361,11 @@ def edit_question(question_id):
 # -----------------------------
 # ADMIN MATERIAL
 # -----------------------------
-@app.route('/admin/add_material', methods=['GET', 'POST'])
+@app.route('/admin_materials')
 @admin_required
-def admin_add_material():
+def admin_manage_materials():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM subjects")
-    modules = cursor.fetchall()
-
-    if request.method == 'POST':
-        subject_id = request.form['subject_id']
-        title = request.form['title'].strip()
-        material_type = request.form['material_type']
-        learning_style = request.form['learning_style']
-
-        content = None
-
-        if material_type == "text":
-            content = request.form.get('content', '').strip()
-
-        elif material_type == "video":
-            raw_link = request.form.get('video_link', '').strip()
-            content = convert_to_embed(raw_link) if raw_link else None
-
-        elif material_type == "pdf":
-            file = request.files.get('pdf_file')
-            if file and file.filename != "":
-                filename = secure_filename(file.filename)
-                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                content = filepath.replace("\\", "/")
-
-        elif material_type == "k_case":
-            content = build_k_case_json(request.form)
-
-        cursor.execute("""
-            INSERT INTO learning_materials
-            (subject_id, title, material_type, content, learning_style)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (subject_id, title, material_type, content, learning_style))
-
-        conn.commit()
-        flash("Material added successfully!", "success")
-        return redirect(url_for('admin_add_material'))
 
     cursor.execute("""
         SELECT lm.*, s.module_name
@@ -1394,7 +1378,130 @@ def admin_add_material():
     cursor.close()
     conn.close()
 
-    return render_template("admin_add_material.html", modules=modules, materials=materials)
+    return render_template("admin_manage_materials.html", materials=materials)
+
+
+@app.route('/admin_add_material', methods=['GET', 'POST'])
+@admin_required
+def admin_add_material():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM subjects")
+    modules = cursor.fetchall()
+
+    style_type_rules = {
+        "V": ["pdf"],
+        "A": ["video"],
+        "R": ["pdf"],
+        "K": ["text", "k_case"]
+    }
+
+    style_labels = {
+        "V": "Visual",
+        "A": "Auditory",
+        "R": "Reading/Writing",
+        "K": "Kinesthetic"
+    }
+
+    if request.method == 'POST':
+        subject_id = request.form['subject_id']
+        title = request.form['title'].strip()
+        material_type = request.form['material_type']
+        learning_style = request.form['learning_style']
+
+        if learning_style not in style_type_rules:
+            flash("Invalid learning style.", "error")
+            cursor.close()
+            conn.close()
+            return redirect(url_for('admin_add_material'))
+
+        if material_type not in style_type_rules[learning_style]:
+            flash(
+                f"Invalid material type for {style_labels[learning_style]} learner.",
+                "error"
+            )
+            cursor.close()
+            conn.close()
+            return redirect(url_for('admin_add_material'))
+
+        if not title:
+            flash("Title is required.", "error")
+            cursor.close()
+            conn.close()
+            return redirect(url_for('admin_add_material'))
+
+        content = None
+
+        if material_type == "text":
+            content = request.form.get('content', '').strip()
+            if not content:
+                flash("Short explanation text is required for Kinesthetic material.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_add_material'))
+
+        elif material_type == "video":
+            raw_link = request.form.get('video_link', '').strip()
+            if not raw_link:
+                flash("YouTube link is required for Auditory material.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_add_material'))
+            content = convert_to_embed(raw_link)
+
+        elif material_type == "pdf":
+            file = request.files.get('pdf_file')
+            if not file or file.filename == "":
+                flash("PDF file is required for this material.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_add_material'))
+
+            filename = secure_filename(file.filename)
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            content = filepath.replace("\\", "/")
+
+        elif material_type == "k_case":
+            case_json = build_k_case_json(request.form)
+            case_data = parse_k_case_json(case_json)
+
+            required_case_fields = [
+                case_data.get("scenario"),
+                case_data.get("question"),
+                case_data.get("option_a"),
+                case_data.get("option_b"),
+                case_data.get("option_c"),
+                case_data.get("option_d"),
+                case_data.get("correct_answer")
+            ]
+
+            if not all(required_case_fields):
+                flash("Please complete all case study fields and select the correct answer.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_add_material'))
+
+            content = case_json
+
+        cursor.execute("""
+            INSERT INTO learning_materials
+            (subject_id, title, material_type, content, learning_style)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (subject_id, title, material_type, content, learning_style))
+
+        conn.commit()
+        flash("Material added successfully!", "success")
+        cursor.close()
+        conn.close()
+        return redirect(url_for('admin_manage_materials'))
+
+    cursor.close()
+    conn.close()
+
+    return render_template("admin_add_material.html", modules=modules)
 
 
 @app.route('/delete_material/<int:material_id>')
@@ -1406,7 +1513,7 @@ def delete_material(material_id):
     conn.commit()
     cursor.close()
     conn.close()
-    return redirect(url_for('admin_add_material'))
+    return redirect(url_for('admin_manage_materials'))
 
 
 @app.route('/edit_material/<int:material_id>', methods=['GET', 'POST'])
@@ -1421,20 +1528,65 @@ def edit_material(material_id):
     cursor.execute("SELECT * FROM learning_materials WHERE id=%s", (material_id,))
     material = cursor.fetchone()
 
+    style_type_rules = {
+        "V": ["pdf"],
+        "A": ["video"],
+        "R": ["pdf"],
+        "K": ["text", "k_case"]
+    }
+
+    style_labels = {
+        "V": "Visual",
+        "A": "Auditory",
+        "R": "Reading/Writing",
+        "K": "Kinesthetic"
+    }
+
     if request.method == 'POST':
         subject_id = request.form['subject_id']
         title = request.form['title'].strip()
         material_type = request.form['material_type']
         learning_style = request.form['learning_style']
 
+        if learning_style not in style_type_rules:
+            flash("Invalid learning style.", "error")
+            cursor.close()
+            conn.close()
+            return redirect(url_for('edit_material', material_id=material_id))
+
+        if material_type not in style_type_rules[learning_style]:
+            flash(
+                f"Invalid material type for {style_labels[learning_style]} learner.",
+                "error"
+            )
+            cursor.close()
+            conn.close()
+            return redirect(url_for('edit_material', material_id=material_id))
+
+        if not title:
+            flash("Title is required.", "error")
+            cursor.close()
+            conn.close()
+            return redirect(url_for('edit_material', material_id=material_id))
+
         content = None
 
         if material_type == "text":
             content = request.form.get('content', '').strip()
+            if not content:
+                flash("Short explanation text is required for Kinesthetic material.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('edit_material', material_id=material_id))
 
         elif material_type == "video":
             raw_link = request.form.get('video_link', '').strip()
-            content = convert_to_embed(raw_link) if raw_link else None
+            if not raw_link:
+                flash("YouTube link is required for Auditory material.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('edit_material', material_id=material_id))
+            content = convert_to_embed(raw_link)
 
         elif material_type == "pdf":
             file = request.files.get('pdf_file')
@@ -1447,8 +1599,33 @@ def edit_material(material_id):
             else:
                 content = material['content']
 
+            if not content:
+                flash("PDF file is required for this material.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('edit_material', material_id=material_id))
+
         elif material_type == "k_case":
-            content = build_k_case_json(request.form)
+            case_json = build_k_case_json(request.form)
+            case_data = parse_k_case_json(case_json)
+
+            required_case_fields = [
+                case_data.get("scenario"),
+                case_data.get("question"),
+                case_data.get("option_a"),
+                case_data.get("option_b"),
+                case_data.get("option_c"),
+                case_data.get("option_d"),
+                case_data.get("correct_answer")
+            ]
+
+            if not all(required_case_fields):
+                flash("Please complete all case study fields and select the correct answer.", "error")
+                cursor.close()
+                conn.close()
+                return redirect(url_for('edit_material', material_id=material_id))
+
+            content = case_json
 
         cursor.execute("""
             UPDATE learning_materials
@@ -1465,7 +1642,7 @@ def edit_material(material_id):
         conn.close()
 
         flash("Material updated successfully!", "success")
-        return redirect(url_for('admin_add_material'))
+        return redirect(url_for('admin_manage_materials'))
 
     k_case = None
     if material and material['material_type'] == 'k_case':

@@ -9,36 +9,43 @@
 
 <div class="page-container">
 
-  <!-- HEADER -->
   <header>
     <div class="logo">🎓 PCLE LMS - Admin</div>
     <nav>
       <ul>
-        <!--<li><a href="{{ url_for('admin_home') }}">Dashboard</a></li>-->
         <li><a href="{{ url_for('logout') }}">Logout</a></li>
       </ul>
     </nav>
   </header>
 
-  <!-- MAIN LAYOUT -->
   <div class="admin-layout">
 
-    <!-- SIDEBAR -->
     <div class="sidebar">
       <h2>Admin Panel</h2>
       <a href="{{ url_for('admin_home') }}">Dashboard</a>
       <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
       <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
-      <a href="{{ url_for('admin_add_module') }}">Add Module</a>
-      <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
-      <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
+      <a href="{{ url_for('admin_manage_modules') }}">Manage Modules</a>
+      <a href="{{ url_for('admin_manage_questions') }}">Manage Questions</a>
+      <a href="{{ url_for('admin_manage_materials') }}">Manage Materials</a>
     </div>
 
-    <!-- CONTENT -->
     <div class="content">
       <div class="admin-panel">
 
         <h1>Add Learning Material</h1>
+        <p class="page-note">
+          Material types are fixed by learning style:
+          Visual = Slides PDF, Auditory = YouTube Video, Reading/Writing = Notes PDF, Kinesthetic = Short Explanation or Case Study MCQ.
+        </p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
         <form method="POST" enctype="multipart/form-data">
 
@@ -58,34 +65,28 @@
           </select>
 
           <label>Title</label>
-          <input type="text" name="title" required>
+          <input type="text" name="title" placeholder="Example: Academic Writing Slides" required>
 
           <label>Material Type</label>
-          <select name="material_type" id="materialType" required>
-            <option value="text">Text</option>
-            <option value="video">Video (YouTube)</option>
-            <option value="pdf">PDF</option>
-          </select>
+          <select name="material_type" id="materialType" required></select>
 
-          <!-- TEXT -->
-          <div id="textInput">
-            <label>Content</label>
-            <textarea name="content"></textarea>
+          <div id="styleGuideBox" class="info-box"></div>
+
+          <div id="textInput" style="display:none;">
+            <label>Short Explanation Text</label>
+            <textarea name="content" placeholder="Enter the short explanation for Kinesthetic learners..."></textarea>
           </div>
 
-          <!-- VIDEO -->
           <div id="videoInput" style="display:none;">
             <label>YouTube Link</label>
             <input type="url" name="video_link" placeholder="https://www.youtube.com/watch?v=...">
           </div>
 
-          <!-- PDF -->
           <div id="pdfInput" style="display:none;">
             <label>Upload PDF</label>
             <input type="file" name="pdf_file" accept="application/pdf">
           </div>
 
-          <!-- K CASE -->
           <div id="kCaseInput" style="display:none;">
             <label>Scenario</label>
             <textarea name="k_scenario" placeholder="Enter case study scenario..."></textarea>
@@ -115,65 +116,24 @@
             </select>
 
             <small>
-              For Kinesthetic learning:<br>
-              - Add 1 Text material as the short explanation<br>
-              - Add 3 separate "Case Study MCQ" materials for 3 case studies
+              Kinesthetic learners should receive:
+              <br>- 1 short explanation text
+              <br>- 2 or 3 separate case study MCQ materials
             </small>
           </div>
 
           <button type="submit">Add Material</button>
         </form>
 
-        <h2>Learning Materials</h2>
-        <table>
-          <tr>
-            <th>No</th>
-            <th>Module</th>
-            <th>Style</th>
-            <th>Title</th>
-            <th>Type</th>
-            <th>Content</th>
-            <th>Actions</th>
-          </tr>
-          {% for m in materials %}
-          <tr>
-            <!--<td>{{ m.id }}</td>--><!--real ID in database-->
-            <td>{{ loop.index }}</td><!--display no-->
-            <td>{{ m.module_name }}</td>
-            <td>{{ m.learning_style }}</td>
-            <td>{{ m.title }}</td>
-            <td>{{ m.material_type }}</td>
-            <td style="max-width: 300px; word-break: break-word;">{{ m.content }}</td>
-            <td>
-                <!-- EDIT -->
-                <a href="{{ url_for('edit_material', material_id=m.id) }}" class="btn-edit">
-                    Edit
-                </a>
-
-                <!-- DELETE -->
-                <a href="{{ url_for('delete_material', material_id=m.id) }}"
-                    onclick="return confirm('Are you sure you want to delete this material?');"
-                    class="btn-delete">
-                    Delete
-                </a>
-
-            </td>
-          </tr>
-          {% endfor %}
-        </table>
-
       </div>
     </div>
 
   </div>
 
-  <!-- FOOTER -->
   <footer>
     <p>© 2026 PCLE LMS - Admin Panel</p>
   </footer>
-
 </div>
-
 
 <script>
 const learningStyle = document.getElementById("learningStyle");
@@ -183,6 +143,29 @@ const textInput = document.getElementById("textInput");
 const videoInput = document.getElementById("videoInput");
 const pdfInput = document.getElementById("pdfInput");
 const kCaseInput = document.getElementById("kCaseInput");
+const styleGuideBox = document.getElementById("styleGuideBox");
+
+const styleConfig = {
+  V: {
+    options: [{ value: "pdf", label: "Slides PDF" }],
+    message: "Visual learners should receive slide-based PDF materials with diagrams, flowcharts, and visual structure."
+  },
+  A: {
+    options: [{ value: "video", label: "YouTube Video" }],
+    message: "Auditory learners should receive spoken explanation through YouTube video."
+  },
+  R: {
+    options: [{ value: "pdf", label: "Notes PDF" }],
+    message: "Reading/Writing learners should receive text-heavy notes in PDF format."
+  },
+  K: {
+    options: [
+      { value: "text", label: "Short Explanation Text" },
+      { value: "k_case", label: "Case Study MCQ" }
+    ],
+    message: "Kinesthetic learners should receive practical, applied materials such as short explanation text and case study MCQ."
+  }
+};
 
 function hideAllInputs() {
   textInput.style.display = "none";
@@ -193,26 +176,17 @@ function hideAllInputs() {
 
 function updateMaterialOptions() {
   const style = learningStyle.value;
-  const oldValue = materialType.value;
+  const config = styleConfig[style];
 
   materialType.innerHTML = "";
+  config.options.forEach(opt => {
+    const option = document.createElement("option");
+    option.value = opt.value;
+    option.textContent = opt.label;
+    materialType.appendChild(option);
+  });
 
-  if (style === "K") {
-    materialType.innerHTML = `
-      <option value="text">Text</option>
-      <option value="k_case">Case Study MCQ</option>
-    `;
-  } else {
-    materialType.innerHTML = `
-      <option value="text">Text</option>
-      <option value="video">Video (YouTube)</option>
-      <option value="pdf">PDF</option>
-    `;
-  }
-
-  const optionExists = [...materialType.options].some(opt => opt.value === oldValue);
-  materialType.value = optionExists ? oldValue : "text";
-
+  styleGuideBox.textContent = config.message;
   updateInputFields();
 }
 
@@ -235,7 +209,6 @@ materialType.addEventListener("change", updateInputFields);
 
 updateMaterialOptions();
 </script>
-
 
 </body>
 </html>
