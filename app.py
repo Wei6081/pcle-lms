@@ -315,7 +315,8 @@ def admin_login():
         cursor.close()
         conn.close()
 
-        if admin and check_password_hash(admin['password'], password):
+        #if admin and check_password_hash(admin['password'], password):
+        if admin and admin['password'] == password:
             session.clear()
             session['admin_logged_in'] = True
             session['admin_id'] = admin['admin_id']
