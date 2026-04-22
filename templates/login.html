@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PCLE LMS Login</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
@@ -46,26 +47,38 @@
             <label for="password">Password</label>
             <div class="password-wrapper">
               <input type="password" id="password" name="password" placeholder="Enter your password" required>
-              <span class="toggle-password" onclick="togglePassword('password', this)">👁</span>
+              <button type="button" class="toggle-password" onclick="togglePassword('password', this)" aria-label="Show password">
+                <i class="fa-regular fa-eye"></i>
+              </button>
             </div>
           </div>
 
           <button type="submit" class="btn">Login</button>
-          <p class="note">Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+
+          <p class="note">
+            Don't have an account?
+            <a href="{{ url_for('register') }}">Register here</a>
+          </p>
         </form>
       </div>
     </div>
   </div>
 
   <script>
-    function togglePassword(id, icon) {
+    function togglePassword(id, button) {
       const input = document.getElementById(id);
+      const icon = button.querySelector("i");
+
       if (input.type === "password") {
         input.type = "text";
-        icon.textContent = "🙈";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+        button.setAttribute("aria-label", "Hide password");
       } else {
         input.type = "password";
-        icon.textContent = "👁";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+        button.setAttribute("aria-label", "Show password");
       }
     }
   </script>

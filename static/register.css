@@ -36,6 +36,7 @@ header nav ul {
 header nav ul li a {
   color: #fff;
   text-decoration: none;
+  font-weight: 500;
 }
 
 header nav ul li a:hover {
@@ -47,66 +48,106 @@ header nav ul li a:hover {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 80px 20px;
+  padding: 70px 20px;
 }
 
 /* CARD */
 .register-card {
   background: #fff;
-  padding: 40px 35px;
-  max-width: 420px;
+  padding: 42px 36px;
+  max-width: 460px;
   width: 100%;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
   text-align: center;
 }
 
 .register-card h2 {
   color: #1e3a8a;
   margin-bottom: 10px;
+  font-size: 2rem;
 }
 
 .subtitle {
   font-size: 14px;
   color: #6b7280;
-  margin-bottom: 25px;
+  margin-bottom: 28px;
 }
 
 /* FORM */
 .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   text-align: left;
 }
 
 label {
   display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
+  margin-bottom: 8px;
+  font-weight: 600;
 }
 
 input {
   width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
   font-size: 15px;
+  background: #fff;
 }
 
 input:focus {
   outline: none;
-  border-color: #1abc9c;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+/* PASSWORD FIELD */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding: 14px 46px 14px 14px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 17px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-password:hover {
+  color: #2563eb;
+}
+
+.toggle-password:focus {
+  outline: none;
 }
 
 /* BUTTON */
 .btn {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   margin-top: 10px;
   background: #1abc9c;
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 600;
   cursor: pointer;
   transition: 0.3s;
 }
@@ -117,7 +158,7 @@ input:focus {
 
 /* NOTE */
 .note {
-  margin-top: 15px;
+  margin-top: 18px;
   font-size: 14px;
 }
 
@@ -133,12 +174,12 @@ input:focus {
 /* FLASH */
 .flash.success {
   color: green;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
 .flash.error {
   color: red;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
 .hint {
@@ -176,22 +217,4 @@ input:focus {
 .btn:disabled {
   background: #9ca3af;
   cursor: not-allowed;
-}
-
-.password-wrapper {
-  position: relative;
-}
-
-.password-wrapper input {
-  padding-right: 45px;
-}
-
-.toggle-password {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  font-size: 18px;
-  user-select: none;
 }
