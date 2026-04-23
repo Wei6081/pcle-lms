@@ -293,11 +293,11 @@ td.actions-cell {
 
 .btn-add,
 .btn-view,
-.btn-edit,
 .btn-back {
   background: #2563eb;
 }
 
+.btn-edit,
 .btn-reset {
   background: #16a34a;
 }
