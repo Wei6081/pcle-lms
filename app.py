@@ -421,7 +421,7 @@ def module(module_name):
     progress = get_module_progress_row(user_id, subject_id)
 
     if progress and progress.get("final_score") is not None:
-        flash("You already completed this module. You can view the result, but cannot redo it.", "error")
+        flash("You already completed this module. You can view the result, but cannot redo it.", "info")
         session["module_name"] = module_name
         sync_progress_flags(user_id)
         return redirect(url_for("result"))
