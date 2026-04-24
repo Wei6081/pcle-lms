@@ -29,7 +29,9 @@
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
-            <div class="flash {{ category }}">{{ message }}</div>
+            {% if category == 'error' %}
+              <p class="flash error">{{ message }}</p>
+            {% endif %}
           {% endfor %}
         {% endif %}
       {% endwith %}
@@ -41,7 +43,9 @@
 
         <label>Password</label>
         <input type="password" name="password" placeholder="Enter password" required>
-
+        <button type="button" class="toggle-password" onclick="togglePassword('password', this)" aria-label="Show password">
+          <i class="fa-regular fa-eye"></i>
+        </button>
         <button type="submit">Login</button>
 
       </form>
@@ -55,6 +59,23 @@
   </footer>
 
 </div>
+<script>
+    function togglePassword(id, button) {
+      const input = document.getElementById(id);
+      const icon = button.querySelector("i");
 
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+        button.setAttribute("aria-label", "Hide password");
+      } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+        button.setAttribute("aria-label", "Show password");
+      }
+    }
+</script>
 </body>
 </html>
