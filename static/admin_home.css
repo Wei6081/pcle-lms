@@ -333,7 +333,7 @@ footer p {
 }
 
 /* ========== RESPONSIVE ========== */
-@media (max-width: 992px) {
+/*@media (max-width: 992px) {
   .cards {
     grid-template-columns: 1fr;
   }
@@ -374,7 +374,7 @@ footer p {
   .performance-cards {
     grid-template-columns: 1fr;
   }
-}
+}*/
 
 /* ========== ADMIN LOGIN ========== */
 .login-wrap {

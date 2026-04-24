@@ -160,7 +160,7 @@
   color: #b45309;
 }
 
-@media (max-width: 768px) {
+/*@media (max-width: 768px) {
   .recommend-hero h1 {
     font-size: 1.5rem;
   }
@@ -173,4 +173,4 @@
     max-width: 95%;
     padding: 1.5rem 1rem;
   }
-}
+}*/

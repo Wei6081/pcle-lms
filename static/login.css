@@ -201,7 +201,7 @@ input[type="password"]:focus {
 }
 
 /* RESPONSIVE */
-@media screen and (max-width: 768px) {
+/*@media screen and (max-width: 768px) {
   .login-container {
     flex-direction: column;
     margin: 30px 16px;
@@ -220,4 +220,4 @@ input[type="password"]:focus {
   .form-content {
     padding: 24px 20px;
   }
-}
+}*/

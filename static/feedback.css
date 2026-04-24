@@ -233,7 +233,7 @@ footer {
 }
 
 /* ===== MOBILE RESPONSIVE FIX ===== */
-@media (max-width: 768px) {
+/*@media (max-width: 768px) {
   .layout {
     flex-direction: column;
     min-height: 100vh;
@@ -317,4 +317,4 @@ footer {
     float: none;
     width: 100%;
   }
-}
+}*/

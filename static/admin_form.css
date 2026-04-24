@@ -329,7 +329,7 @@ footer {
   color: #fff;
 }
 
-@media (max-width: 900px) {
+/*@media (max-width: 900px) {
   .admin-layout {
     flex-direction: column;
   }
@@ -354,4 +354,4 @@ footer {
     display: block;
     overflow-x: auto;
   }
-}
+}*/
