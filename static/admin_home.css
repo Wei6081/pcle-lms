@@ -480,7 +480,7 @@ header .logo {
   font-size: 1rem;
 }
 
-.login-panel button {
+.login-panel button[type="submit"] {
   margin-top: 1rem;
   width: 100%;
   border: none;
