@@ -92,6 +92,15 @@ header nav ul li a:hover {
 }
 
 /* password*/
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 45px;
+}
+
 .toggle-password {
   width: auto !important;
   min-width: 0 !important;
@@ -112,14 +121,6 @@ header nav ul li a:hover {
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-}
-
-.toggle-password:hover {
-  color: #2563eb;
-}
-
-.toggle-password:focus {
-  outline: none;
 }
 
 
