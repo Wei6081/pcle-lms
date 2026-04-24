@@ -2,7 +2,9 @@ import mysql.connector
 import json
 import os
 import re
+from ncf_model import train_and_save_ncf
 from functools import wraps
+
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -967,12 +969,11 @@ def save_feedback():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Check if feedback already submitted
     cursor.execute("""
         SELECT id
         FROM feedback
-        WHERE user_id = %s AND module_name = %s
-    """, (user_id, module_name))
+        WHERE user_id = %s AND subject_id = %s
+    """, (user_id, subject_id))
 
     existing = cursor.fetchone()
 
@@ -981,9 +982,9 @@ def save_feedback():
         conn.close()
         return jsonify({"message": "Feedback already submitted. This step is locked."}), 400
 
-    # Save to module_progress
     cursor.execute("""
-        INSERT INTO module_progress (user_id, subject_id, helpfulness_score, recommend_score, comments)
+        INSERT INTO module_progress 
+        (user_id, subject_id, helpfulness_score, recommend_score, comments)
         VALUES (%s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
             helpfulness_score = VALUES(helpfulness_score),
@@ -991,15 +992,20 @@ def save_feedback():
             comments = VALUES(comments)
     """, (user_id, subject_id, helpfulness, recommend, comments))
 
-    # Save to feedback
     cursor.execute("""
-        INSERT INTO feedback (user_id, module_name, helpfulness_score, recommend_score, comments)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (user_id, module_name, helpfulness, recommend, comments))
+        INSERT INTO feedback 
+        (user_id, module_name, subject_id, helpfulness_score, recommend_score, comments)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (user_id, module_name, subject_id, helpfulness, recommend, comments))
 
     conn.commit()
     cursor.close()
     conn.close()
+
+    try:
+        train_and_save_ncf()
+    except Exception as e:
+        print("NCF update failed:", e)
 
     return jsonify({"message": "Feedback saved!"})
 
@@ -1019,42 +1025,88 @@ def recommend():
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT DISTINCT module_name
-        FROM feedback
-        WHERE user_id = %s
+        SELECT s.module_name
+        FROM module_progress mp
+        JOIN subjects s ON mp.subject_id = s.id
+        WHERE mp.user_id = %s
+          AND mp.final_score IS NOT NULL
     """, (user_id,))
+
     done_modules = {row["module_name"] for row in cursor.fetchall()}
 
     cursor.execute("""
-        SELECT f.module_name,
-               AVG(f.recommend_score) AS avg_rating,
-               COUNT(*) AS total_votes,
-               s.module_description
-        FROM feedback f
-        JOIN students st ON f.user_id = st.user_id
-        JOIN subjects s ON f.module_name = s.module_name
-        WHERE st.learning_style = %s
-          AND f.recommend_score IS NOT NULL
-        GROUP BY f.module_name, s.module_description
-        HAVING COUNT(*) > 0
-        ORDER BY avg_rating DESC, total_votes DESC
-    """, (chosen_style,))
+        SELECT
+            s.id AS subject_id,
+            s.module_name,
+            s.module_description,
+            r.predicted_score,
+            r.recommendation_type
+        FROM recommendations r
+        JOIN subjects s
+          ON r.subject_id = s.id
+        WHERE r.user_id = %s
+          AND r.predicted_score IS NOT NULL
+        ORDER BY r.predicted_score DESC
+    """, (user_id,))
 
-    rows = cursor.fetchall()
+    ncf_rows = cursor.fetchall()
+
+    recommended_modules = []
+    seen_modules = set()
+
+    for row in ncf_rows:
+        module_name = row["module_name"]
+
+        if module_name == current_module:
+            continue
+
+        if module_name in done_modules:
+            continue
+
+        if module_name in seen_modules:
+            continue
+
+        seen_modules.add(module_name)
+        recommended_modules.append(row)
+
+    if not recommended_modules:
+        cursor.execute("""
+            SELECT 
+                f.module_name,
+                s.module_description,
+                AVG(f.recommend_score) AS predicted_score,
+                'Fallback' AS recommendation_type
+            FROM feedback f
+            JOIN students st ON f.user_id = st.user_id
+            JOIN subjects s ON f.subject_id = s.id
+            WHERE st.learning_style = %s
+              AND f.recommend_score IS NOT NULL
+            GROUP BY f.module_name, s.module_description
+            ORDER BY predicted_score DESC
+        """, (chosen_style,))
+
+        fallback_rows = cursor.fetchall()
+
+        for row in fallback_rows:
+            module_name = row["module_name"]
+
+            if module_name == current_module:
+                continue
+
+            if module_name in done_modules:
+                continue
+
+            recommended_modules.append(row)
+
     cursor.close()
     conn.close()
 
-    recommended_modules = []
-    for row in rows:
-        if row["module_name"] == current_module:
-            continue
-        if row["module_name"] in done_modules:
-            continue
-        recommended_modules.append(row)
+    session['recommend_done'] = True
 
-    recommended_modules = recommended_modules[:5]
-
-    return render_template("recommended_module.html", recommended_modules=recommended_modules)
+    return render_template(
+        "recommended_module.html",
+        recommended_modules=recommended_modules[:5]
+    )
 
 
 @app.route('/recommended_module')
