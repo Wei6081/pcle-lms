@@ -155,7 +155,12 @@ def sync_progress_flags(user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT learning_style FROM students WHERE user_id=%s", (user_id,))
+        # Check student learning style
+        cursor.execute("""
+            SELECT learning_style 
+            FROM students 
+            WHERE user_id = %s
+        """, (user_id,))
         student = cursor.fetchone()
 
         if student and student.get('learning_style'):
@@ -167,6 +172,7 @@ def sync_progress_flags(user_id=None):
 
         subject_id = get_current_subject_id()
 
+        # If current module exists, check that module progress
         if subject_id:
             cursor.execute("""
                 SELECT *
@@ -181,19 +187,31 @@ def sync_progress_flags(user_id=None):
             session['assessment_done'] = bool(progress and progress.get('final_score') is not None)
             session['result_done'] = bool(progress and progress.get('final_score') is not None)
             session['recommend_done'] = bool(progress and progress.get('final_score') is not None)
+
+        # If no current module, check database generally
         else:
+            cursor.execute("""
+                SELECT COUNT(*) AS completed_count
+                FROM module_progress
+                WHERE user_id = %s
+                  AND final_score IS NOT NULL
+            """, (user_id,))
+            completed_count = cursor.fetchone()["completed_count"]
+
             session['subject_done'] = False
             session['preassessment_done'] = False
             session['module_done'] = False
             session['assessment_done'] = False
-            session['result_done'] = False
-            session['recommend_done'] = False
+
+            # Unlock Result and Recommendation if student completed at least 1 module
+            session['result_done'] = completed_count > 0
+            session['recommend_done'] = completed_count > 0
 
         cursor.close()
         conn.close()
 
-    except Exception:
-        pass
+    except Exception as e:
+        print("Sync progress error:", e)
 
 
 @app.route('/')
