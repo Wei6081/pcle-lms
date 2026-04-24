@@ -398,49 +398,6 @@ header .logo {
   min-width: 0;
 }
 
-/* ========== RESPONSIVE ========== */
-/*@media (max-width: 992px) {
-  .cards {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .admin-layout {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    padding: 1rem;
-  }
-
-  .sidebar h2 {
-    margin-bottom: 1rem;
-  }
-
-  .content {
-    padding: 1rem;
-  }
-
-  .admin-panel {
-    padding: 1.2rem;
-  }
-
-  .admin-panel h1 {
-    font-size: 1.8rem;
-  }
-}
-
-@media (max-width: 992px) {
-  .dashboard-top-row {
-    grid-template-columns: 1fr;
-  }
-
-  .performance-cards {
-    grid-template-columns: 1fr;
-  }
-}*/
 
 /* ========== ADMIN LOGIN ========== */
 .login-wrap {
@@ -517,3 +474,4 @@ header .logo {
   color: #64748b;
   font-weight: bold;
 }
+

@@ -1,0 +1,59 @@
+/* ===== MOBILE VIEW ONLY ===== */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  header nav ul {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .layout,
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .main-content,
+  .content {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .container,
+  .admin-panel,
+  .portal-container,
+  .recommend-content,
+  .login-container,
+  .register-card {
+    width: 95%;
+    max-width: 95%;
+    margin: 20px auto;
+    padding: 20px;
+  }
+
+  .quick-access .card,
+  .recommend-card {
+    width: 100%;
+  }
+
+  .login-container {
+    flex-direction: column;
+  }
+
+  .login-image {
+    display: none;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+}
