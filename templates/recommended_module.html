@@ -48,10 +48,34 @@
         {% if recommended_modules %}
           <div class="recommend-grid">
             {% for module in recommended_modules %}
-              <div class="recommend-card">
-                <span class="recommend-badge">Recommended</span>
+              <div class="recommend-card {% if loop.first %}top-recommend-card{% endif %}">
+
+                {% if loop.first %}
+                  <span class="top-badge">🏆 Top Recommended</span>
+                {% else %}
+                  <span class="recommend-badge">Rank #{{ loop.index }}</span>
+                {% endif %}
+
                 <h3>{{ module.module_name }}</h3>
                 <p>{{ module.module_description }}</p>
+
+                <div class="score-box">
+                  {% if module.predicted_score is defined and module.predicted_score is not none %}
+                    <span>Predicted Score</span>
+                    <strong>{{ module.predicted_score|round(2) }} / 5</strong>
+                  {% else %}
+                    <span>Predicted Score</span>
+                    <strong>Not available</strong>
+                  {% endif %}
+                </div>
+
+                <div class="source-text">
+                  {% if module.recommendation_type is defined and module.recommendation_type %}
+                    Based on: {{ module.recommendation_type }}
+                  {% else %}
+                    Based on: Recommendation model
+                  {% endif %}
+                </div>
 
                 <div class="recommend-actions">
                   <a href="{{ url_for('module', module_name=module.module_name) }}" class="btn-small">

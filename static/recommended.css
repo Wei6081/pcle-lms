@@ -114,6 +114,53 @@
   text-decoration: none;
 }
 
+.top-recommend-card {
+  border: 2px solid #f59e0b;
+  background: linear-gradient(180deg, #fffbeb, #ffffff);
+}
+
+.top-badge {
+  display: inline-block;
+  align-self: flex-start;
+  margin-bottom: 1rem;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+}
+
+.score-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.8rem;
+  margin-top: 1rem;
+}
+
+.score-box span {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.score-box strong {
+  color: #1e3a8a;
+  font-size: 1.15rem;
+}
+
+.source-text {
+  margin-top: 0.75rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.recommend-card:first-child h3 {
+  color: #b45309;
+}
+
 
 /* ===== MOBILE RESPONSIVE FIX ===== */
 @media (max-width: 768px) {
