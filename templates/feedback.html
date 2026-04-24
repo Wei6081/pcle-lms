@@ -31,55 +31,66 @@
 
   <div class="main-content">
 
-  <header>
-    <div class="logo">🎓 PCLE LMS</div>
-    <nav>
-      <ul>
-        <li><a href="{{ url_for('home') }}">Home</a></li>
-      </ul>
-    </nav>
-  </header>
+    <header>
+      <div class="logo">🎓 PCLE LMS</div>
+      <nav>
+        <ul>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+        </ul>
+      </nav>
+    </header>
 
-  <div class="container">
-  <h2>Module Feedback</h2>
+    <div class="container">
+    <h2>Module Feedback</h2>
 
-  <form id="FeedbackForm">
-    
-    <input type="hidden" id="module_name" value="{{ module_name }}">
+    {% if locked %}
+      <div class="submitted-box">
+        <h3>Feedback Submitted</h3>
+        <p>You have already submitted feedback for this module.</p>
 
-    <!-- Question 1 -->
-    <div class="question">
-      <label>1. How do you find this module helpful?</label>
-      <div class="rating-options" id="q1Options">
-        <span data-value="1">1<br><small>Very Unhelpful</small></span>
-        <span data-value="2">2<br><small>Slightly Unhelpful</small></span>
-        <span data-value="3">3<br><small>Neither</small></span>
-        <span data-value="4">4<br><small>Slightly Helpful</small></span>
-        <span data-value="5">5<br><small>Very Helpful</small></span>
+        <p><strong>Helpfulness Score:</strong> {{ existing_feedback.helpfulness_score }}/5</p>
+        <p><strong>Recommendation Score:</strong> {{ existing_feedback.recommend_score }}/5</p>
+        <p><strong>Comment:</strong> {{ existing_feedback.comments }}</p>
+
+        <a href="{{ url_for('recommend') }}" class="btn">Continue to Recommended Modules</a>
       </div>
-    </div>
+    {% else %}
 
-    <!-- Question 2 -->
-    <div class="question">
-      <label>2. How likely would you recommend this module to your friends?</label>
-      <div class="rating-options" id="q2Options">
-        <span data-value="1">1<br><small>Very Unlikely</small></span>
-        <span data-value="2">2<br><small>Unlikely</small></span>
-        <span data-value="3">3<br><small>Neither</small></span>
-        <span data-value="4">4<br><small>Likely</small></span>
-        <span data-value="5">5<br><small>Very Likely</small></span>
+    <form id="FeedbackForm">
+      <input type="hidden" id="module_name" value="{{ module_name }}">
+
+      <div class="question">
+        <label>1. How do you find this module helpful?</label>
+        <div class="rating-options" id="q1Options">
+          <span data-value="1">1<br><small>Very Unhelpful</small></span>
+          <span data-value="2">2<br><small>Slightly Unhelpful</small></span>
+          <span data-value="3">3<br><small>Neither</small></span>
+          <span data-value="4">4<br><small>Slightly Helpful</small></span>
+          <span data-value="5">5<br><small>Very Helpful</small></span>
+        </div>
       </div>
-    </div>
 
-    <!-- Comment -->
-    <div class="question">
-      <label>3. Any comments or feedback to improve this module?</label>
-      <textarea id="comment" rows="4" placeholder="Write your feedback here..."></textarea>
-    </div>
+      <div class="question">
+        <label>2. How likely would you recommend this module to your friends?</label>
+        <div class="rating-options" id="q2Options">
+          <span data-value="1">1<br><small>Very Unlikely</small></span>
+          <span data-value="2">2<br><small>Unlikely</small></span>
+          <span data-value="3">3<br><small>Neither</small></span>
+          <span data-value="4">4<br><small>Likely</small></span>
+          <span data-value="5">5<br><small>Very Likely</small></span>
+        </div>
+      </div>
 
-    <button type="submit" class="btn">Submit Feedback</button>
-    <div id="feedbackMessage" class="feedback"></div>
-  </form>
+      <div class="question">
+        <label>3. Any comments or feedback to improve this module?</label>
+        <textarea id="comment" rows="4" placeholder="Write your feedback here..."></textarea>
+      </div>
+
+      <button type="submit" class="btn">Submit Feedback</button>
+      <div id="feedbackMessage" class="feedback"></div>
+    </form>
+
+    {% endif %}
   </div>
 
   <!-- FOOTER -->

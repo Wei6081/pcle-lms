@@ -68,12 +68,12 @@
           </iframe>
         </div>
       {% elif m.material_type == 'pdf' %}
-        <a href="{{ url_for('static', filename=m.content.replace('static/', '')) }}" target="_blank" class="btn">
-          Open PDF
-        </a>
+        <a href="{{ m.content }}" target="_blank" class="btn">Open PDF</a>
 
       {% elif m.material_type == 'text' %}
-        <p>{{ m.content }}</p>
+        <div class="text-material-box">
+          {{ m.content | replace('\n', '<br>') | safe }}
+        </div>
 
         {% elif m.material_type == 'k_case' and m.case_data %}
             <div class="case-study-box">

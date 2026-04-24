@@ -199,3 +199,29 @@ footer {
   margin-top: 0.75rem;
   font-weight: 600;
 }
+
+.text-material-box {
+  background: #f8fafc;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  padding: 18px 22px;
+  line-height: 1.8;
+  font-size: 16px;
+  color: #1f2937;
+  white-space: normal;
+}
+
+.content-box {
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  padding: 22px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.content-box h3 {
+  margin-top: 0;
+  margin-bottom: 14px;
+  color: #111827;
+}

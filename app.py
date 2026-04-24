@@ -291,7 +291,7 @@ def login():
             sync_progress_flags(user['id'])
 
             flash("Login successful!", "success")
-            return redirect(next_url or url_for('home'))
+            return redirect(url_for('home'))
 
         flash("Invalid email or password", "error")
         return redirect(url_for('login'))
@@ -897,11 +897,33 @@ def result():
 @app.route('/feedback')
 @login_required
 def feedback():
+    user_id = session.get('user_id')
     module_name = session.get('module_name')
+
     if not module_name:
         flash("Please choose a module first.", "error")
         return redirect(url_for("subject"))
-    return render_template("feedback.html", module_name=module_name)
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT helpfulness_score, recommend_score, comments
+        FROM feedback
+        WHERE user_id = %s AND module_name = %s
+    """, (user_id, module_name))
+
+    existing_feedback = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        "feedback.html",
+        module_name=module_name,
+        existing_feedback=existing_feedback,
+        locked=True if existing_feedback else False
+    )
 
 
 @app.route('/save_feedback', methods=['POST'])
@@ -927,24 +949,36 @@ def save_feedback():
         return jsonify({"message": "User or module missing"}), 400
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
+    # Check if feedback already submitted
     cursor.execute("""
-    INSERT INTO module_progress (user_id, subject_id, helpfulness_score, recommend_score, comments)
-    VALUES (%s, %s, %s, %s, %s)
-    ON DUPLICATE KEY UPDATE
-        helpfulness_score = VALUES(helpfulness_score),
-        recommend_score = VALUES(recommend_score),
-        comments = VALUES(comments)
+        SELECT id
+        FROM feedback
+        WHERE user_id = %s AND module_name = %s
+    """, (user_id, module_name))
+
+    existing = cursor.fetchone()
+
+    if existing:
+        cursor.close()
+        conn.close()
+        return jsonify({"message": "Feedback already submitted. This step is locked."}), 400
+
+    # Save to module_progress
+    cursor.execute("""
+        INSERT INTO module_progress (user_id, subject_id, helpfulness_score, recommend_score, comments)
+        VALUES (%s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            helpfulness_score = VALUES(helpfulness_score),
+            recommend_score = VALUES(recommend_score),
+            comments = VALUES(comments)
     """, (user_id, subject_id, helpfulness, recommend, comments))
 
+    # Save to feedback
     cursor.execute("""
-    INSERT INTO feedback (user_id, module_name, helpfulness_score, recommend_score, comments)
-    VALUES (%s, %s, %s, %s, %s)
-    ON DUPLICATE KEY UPDATE
-        helpfulness_score = VALUES(helpfulness_score),
-        recommend_score = VALUES(recommend_score),
-        comments = VALUES(comments)
+        INSERT INTO feedback (user_id, module_name, helpfulness_score, recommend_score, comments)
+        VALUES (%s, %s, %s, %s, %s)
     """, (user_id, module_name, helpfulness, recommend, comments))
 
     conn.commit()
