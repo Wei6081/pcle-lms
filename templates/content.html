@@ -68,7 +68,9 @@
           </iframe>
         </div>
       {% elif m.material_type == 'pdf' %}
-        <a href="{{ m.content }}" target="_blank" class="btn">Open PDF</a>
+        <a href="{{ url_for('static', filename=m.content.replace('static/', '')) }}" target="_blank" class="btn">
+          Open PDF
+        </a>
 
       {% elif m.material_type == 'text' %}
         <p>{{ m.content }}</p>
