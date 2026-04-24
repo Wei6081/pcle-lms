@@ -30,7 +30,7 @@
         <nav>
           <ul>
             {% if session.get('user_id') %}
-              <li><a href="{{ url_for('logout') }}">Logout</a></li>
+              <li><a href="{{ url_for('student_logout') }}">Logout</a></li>
             {% else %}
               <li><a href="{{ url_for('admin_login') }}">Admin Portal</a></li>
               <li><a href="{{ url_for('login') }}">Login</a></li>

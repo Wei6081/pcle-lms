@@ -12,7 +12,7 @@
     <div class="logo">🎓 PCLE LMS - Admin</div>
     <nav>
       <ul>
-        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
       </ul>
     </nav>
   </header>
@@ -23,14 +23,17 @@
       <a href="{{ url_for('admin_home') }}">Dashboard</a>
       <a href="{{ url_for('admin_manage_students') }}">Manage Students</a>
       <a href="{{ url_for('admin_feedback') }}">View Feedback</a>
-      <a href="{{ url_for('admin_add_module') }}">Add Module</a>
-      <a href="{{ url_for('admin_add_question') }}">Add Questions</a>
-      <a href="{{ url_for('admin_add_material') }}">Add Materials</a>
+      <a href="{{ url_for('admin_manage_modules') }}">Manage Modules</a>
+      <a href="{{ url_for('admin_manage_questions') }}">Manage Questions</a>
+      <a href="{{ url_for('admin_manage_materials') }}">Manage Materials</a>
     </div>
 
     <div class="content">
       <div class="admin-panel">
-        <h1>Student Detail</h1>
+        <div class="top-bar">
+          <h1>Student Detail</h1>
+          <a href="{{ url_for('admin_manage_students') }}" class="btn-back">Back</a>
+        </div>
 
         {% if student %}
           <p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>

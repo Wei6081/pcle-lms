@@ -279,10 +279,14 @@ def login():
         conn.close()
 
         if user and check_password_hash(user['password'], password):
-            session.clear()
+            for key in ['user_id', 'email', 'user_name', 'module_name',
+                        'learning_style', 'learning_style_full']:
+                session.pop(key, None)
+
             session['user_id'] = user['id']
             session['email'] = user['email']
             session['user_name'] = user['first_name']
+
             initialize_progress_flags()
             sync_progress_flags(user['id'])
 
@@ -295,10 +299,14 @@ def login():
     return render_template('login.html')
 
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash("Logged out successfully.", "success")
+@app.route('/student_logout')
+def student_logout():
+    for key in ['user_id', 'email', 'user_name', 'module_name', 'learning_style',
+                'learning_style_full', 'subject_done', 'preassessment_done',
+                'style_done', 'module_done', 'assessment_done', 'result_done',
+                'recommend_done']:
+        session.pop(key, None)
+    flash("Student logged out successfully.", "success")
     return redirect(url_for('home'))
 
 #admin login
@@ -315,9 +323,10 @@ def admin_login():
         cursor.close()
         conn.close()
 
-        #if admin and check_password_hash(admin['password'], password):
-        if admin and admin['password'] == password:
-            session.clear()
+        if admin and check_password_hash(admin['password'], password):
+            for key in ['admin_logged_in', 'admin_id', 'admin_username', 'admin_email']:
+                session.pop(key, None)
+
             session['admin_logged_in'] = True
             session['admin_id'] = admin['admin_id']
             session['admin_username'] = admin['username']
@@ -330,6 +339,15 @@ def admin_login():
         return redirect(url_for('admin_login'))
 
     return render_template('admin_login.html')
+
+
+@app.route('/admin_logout')
+def admin_logout():
+    for key in ['admin_logged_in', 'admin_id', 'admin_username', 'admin_email']:
+        session.pop(key, None)
+
+    flash("Admin logged out successfully.", "success")
+    return redirect(url_for('admin_login'))
 
 
 @app.route('/subject')
@@ -912,16 +930,21 @@ def save_feedback():
     cursor = conn.cursor()
 
     cursor.execute("""
-        UPDATE module_progress
-        SET helpfulness_score = %s,
-            recommend_score = %s,
-            comments = %s
-        WHERE user_id = %s AND subject_id = %s
-    """, (helpfulness, recommend, comments, user_id, subject_id))
+    INSERT INTO module_progress (user_id, subject_id, helpfulness_score, recommend_score, comments)
+    VALUES (%s, %s, %s, %s, %s)
+    ON DUPLICATE KEY UPDATE
+        helpfulness_score = VALUES(helpfulness_score),
+        recommend_score = VALUES(recommend_score),
+        comments = VALUES(comments)
+    """, (user_id, subject_id, helpfulness, recommend, comments))
 
     cursor.execute("""
-        INSERT INTO feedback (user_id, module_name, helpfulness_score, recommend_score, comments)
-        VALUES (%s, %s, %s, %s, %s)
+    INSERT INTO feedback (user_id, module_name, helpfulness_score, recommend_score, comments)
+    VALUES (%s, %s, %s, %s, %s)
+    ON DUPLICATE KEY UPDATE
+        helpfulness_score = VALUES(helpfulness_score),
+        recommend_score = VALUES(recommend_score),
+        comments = VALUES(comments)
     """, (user_id, module_name, helpfulness, recommend, comments))
 
     conn.commit()

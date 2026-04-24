@@ -22,6 +22,7 @@
         <li class="{{ 'done' if session.get('module_done') else '' }}">Step 4: Learning Content</li>
         <li class="{{ 'done' if session.get('assessment_done') else '' }}">Step 5: Final Assessment</li>
         <li class="{{ 'done' if session.get('result_done') else '' }}">Step 6: Results</li>
+        <li class="{{ 'done' if session.get('recommend_done') else '' }}">Step 7: Recommended Modules</li>
       </ul>
     </aside>
     {% endif %}
@@ -33,7 +34,7 @@
         <nav>
           <ul>
             <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            <li><a href="{{ url_for('student_logout') }}">Logout</a></li>
           </ul>
         </nav>
       </header>

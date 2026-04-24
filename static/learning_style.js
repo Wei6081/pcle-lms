@@ -8,12 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!resultBox) return;
 
-  const backBtn = document.createElement("button");
-  backBtn.textContent = "Back to Main Options";
-  backBtn.classList.add("btn", "hidden");
-  backBtn.style.marginTop = "15px";
-  resultBox.after(backBtn);
-
   const styleMap = {
     "Visual": "V",
     "Auditory": "A",
@@ -52,17 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  function showMainOptions() {
-    if (varkForm) varkForm.classList.add("hidden");
-    if (selectStyle) selectStyle.classList.add("hidden");
-    resultBox.innerHTML = "";
-    backBtn.classList.add("hidden");
-    if (optionBox) optionBox.classList.remove("hidden");
-  }
 
-  function showBackButton() {
-    backBtn.classList.remove("hidden");
-  }
 
   function showResultCard(styleName) {
     const info = styleInfo[styleName];
@@ -100,7 +84,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  backBtn.addEventListener("click", showMainOptions);
 
   if (varkForm) {
     varkForm.addEventListener("submit", async (e) => {
@@ -124,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const topStyles = Object.keys(counts).filter(style => counts[style] === maxScore);
 
       varkForm.classList.add("hidden");
-      showBackButton();
+  
 
       if (topStyles.length === 1) {
         const finalStyle = topStyles[0];
@@ -147,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (selectStyle) selectStyle.classList.add("hidden");
-      showBackButton();
+  
 
       await saveLearningStyle(styleMap[style]);
       showResultCard(style);
