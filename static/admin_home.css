@@ -98,7 +98,7 @@ header nav ul li a:hover {
 }
 
 .admin-panel {
-  max-width: 1450px;
+  max-width: 1100px;
   width: 100%;
   margin: auto;
   background: #ffffff;
@@ -307,7 +307,7 @@ header nav ul li a:hover {
 
 .chart-container canvas {
   width: 100% !important;
-  height: 340px !important;
+  height: 280px !important;
 }
 
 .chart-container.recommendation-chart {
@@ -330,6 +330,39 @@ footer {
 
 footer p {
   margin: 0;
+}
+
+/* ===== NORMAL DESKTOP SIZE FIX ===== */
+html {
+  font-size: 15px;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.container,
+.portal-container,
+.recommend-content {
+  max-width: 1000px;
+}
+
+header {
+  padding: 0.85rem 1.6rem;
+}
+
+header .logo {
+  font-size: 1.4rem;
+}
+
+.sidebar {
+  width: 210px;
+  padding: 14px;
+}
+
+.main-content,
+.content {
+  min-width: 0;
 }
 
 /* ========== RESPONSIVE ========== */

@@ -226,7 +226,38 @@ footer {
   color: #111827;
 }
 
+/* ===== NORMAL DESKTOP SIZE FIX ===== */
+html {
+  font-size: 15px;
+}
 
+body {
+  overflow-x: hidden;
+}
+
+.container,
+.portal-container,
+.recommend-content {
+  max-width: 1000px;
+}
+
+header {
+  padding: 0.85rem 1.6rem;
+}
+
+header .logo {
+  font-size: 1.4rem;
+}
+
+.sidebar {
+  width: 210px;
+  padding: 14px;
+}
+
+.main-content,
+.content {
+  min-width: 0;
+}
 
 /* ===== MOBILE RESPONSIVE FIX ===== */
 /*@media (max-width: 768px) {
