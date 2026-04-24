@@ -1846,6 +1846,11 @@ def admin_reset_student_module(user_id, subject_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    cursor.execute("""
+    DELETE FROM recommendations
+    WHERE user_id = %s AND subject_id = %s
+    """, (user_id, subject_id))
+    
     # remove module progress for this student + module
     cursor.execute("""
         DELETE FROM module_progress
@@ -1873,7 +1878,12 @@ def admin_reset_student_module(user_id, subject_id):
 def admin_reset_student_all(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-
+    
+    cursor.execute("""
+    DELETE FROM recommendations
+    WHERE user_id = %s
+    """, (user_id,))
+    
     cursor.execute("""
         DELETE FROM module_progress
         WHERE user_id = %s
@@ -1904,6 +1914,7 @@ def admin_delete_student(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    cursor.execute("DELETE FROM recommendations WHERE user_id = %s", (user_id,))
     cursor.execute("DELETE FROM module_progress WHERE user_id = %s", (user_id,))
     cursor.execute("DELETE FROM feedback WHERE user_id = %s", (user_id,))
     cursor.execute("DELETE FROM students WHERE user_id = %s", (user_id,))
