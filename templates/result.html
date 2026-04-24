@@ -64,7 +64,11 @@
         <h3>Rate Your Learning Experience</h3>
         <p>Please provide your feedback for this module.</p>
         <div class="card-action">
-          <a href="{{ url_for('feedback') }}" class="btn-small">Go to Feedback</a>
+          {% if feedback_submitted %}
+            <a href="{{ url_for('feedback') }}" class="btn-small">View Feedback</a>
+          {% else %}
+            <a href="{{ url_for('feedback') }}" class="btn-small">Go to Feedback</a>
+          {% endif %}
         </div>
       </div>
     </section>

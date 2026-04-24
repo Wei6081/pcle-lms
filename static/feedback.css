@@ -215,3 +215,19 @@ footer {
   margin-top: 0;
   color: #15803d;
 }
+
+.feedback-btn {
+  display: inline-block;
+  background: #1e3a8a;
+  color: white;
+  text-decoration: none;
+  text-align: center;
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-weight: 600;
+}
+
+.feedback-btn:hover {
+  background: #1d4ed8;
+  text-decoration: none;
+}

@@ -885,12 +885,28 @@ def result():
 
     session['result_done'] = data['final_score'] is not None
 
+    # check if feedback already submitted
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT id
+        FROM feedback
+        WHERE user_id = %s AND module_name = %s
+    """, (user_id, data["module_name"]))
+
+    feedback_exists = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
     return render_template(
         "result.html",
         module_name=data["module_name"],
         pre_score=pre_score,
         final_score=final_score,
-        improvement=improvement
+        improvement=improvement,
+        feedback_submitted=True if feedback_exists else False
     )
 
 
