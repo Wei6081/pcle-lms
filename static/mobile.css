@@ -56,4 +56,18 @@
     display: block;
     overflow-x: auto;
   }
+
+.btn,
+  #nextBtn {
+    width: 100%;
+    max-width: 100%;
+    float: none !important;
+    display: block;
+    margin: 15px 0;
+    text-align: center;
+  }
+
+  #result {
+    margin-top: 15px;
+  }
 }
