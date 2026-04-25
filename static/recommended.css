@@ -160,7 +160,7 @@
   color: #b45309;
 }
 
-/* ===== NORMAL DESKTOP SIZE FIX ===== */
+/*desktop size*/
 html {
   font-size: 15px;
 }
@@ -192,18 +192,3 @@ header .logo {
 .content {
   min-width: 0;
 }
-
-/*@media (max-width: 768px) {
-  .recommend-hero h1 {
-    font-size: 1.5rem;
-  }
-
-  .recommend-content {
-    padding: 1rem;
-  }
-
-  .empty-recommendation {
-    max-width: 95%;
-    padding: 1.5rem 1rem;
-  }
-}*/

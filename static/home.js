@@ -1,3 +1,3 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Reserved for future homepage interactions.
+  //Reserved for future homepage interactions.
 });

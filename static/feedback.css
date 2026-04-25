@@ -1,4 +1,3 @@
-/* GENERAL */
 * {
   margin: 0;
   padding: 0;
@@ -12,7 +11,6 @@ body {
   line-height: 1.6;
 }
 
-/* HEADER */
 header {
   display: flex;
   justify-content: space-between;
@@ -43,7 +41,6 @@ header nav ul li a:hover {
   text-decoration: underline;
 }
 
-/* CONTAINER */
 .container {
   max-width: 650px;
   margin: 30px auto;
@@ -59,7 +56,6 @@ h2 {
   color: #1e3a8a;
 }
 
-/* QUESTIONS */
 .question {
   margin-bottom: 25px;
   padding-bottom: 15px;
@@ -72,7 +68,6 @@ h2 {
   margin-bottom: 10px;
 }
 
-/* RATING OPTIONS */
 .rating-options {
   display: flex;
   justify-content: space-between;
@@ -107,7 +102,6 @@ h2 {
   color: white;
 }
 
-/* TEXTAREA */
 textarea {
   width: 100%;
   padding: 12px;
@@ -117,7 +111,6 @@ textarea {
   font-size: 16px;
 }
 
-/* BUTTON */
 .btn {
   background-color: #1abc9c;
   color: white;
@@ -135,7 +128,6 @@ textarea {
   background-color: #16a085;
 }
 
-/* FEEDBACK MESSAGE */
 .feedback {
   margin-top: 10px;
   font-size: 1rem;
@@ -190,11 +182,10 @@ textarea {
 
 .layout {
   display: flex;
-  flex: 1;              /* IMPORTANT */
-  min-height: 100vh;    /* forces full screen height */
+  flex: 1; 
+  min-height: 100vh;   
 }
 
-/* FOOTER */
 footer {
   text-align: center;
   padding: 1.5rem;
@@ -232,7 +223,7 @@ footer {
   text-decoration: none;
 }
 
-/* ===== NORMAL DESKTOP SIZE FIX ===== */
+/*desktop size*/
 html {
   font-size: 15px;
 }
@@ -265,90 +256,3 @@ header .logo {
   min-width: 0;
 }
 
-
-/* ===== MOBILE RESPONSIVE FIX ===== */
-/*@media (max-width: 768px) {
-  .layout {
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  .sidebar {
-    width: 100%;
-    padding: 12px;
-  }
-
-  .sidebar h3,
-  .sidebar p {
-    text-align: center;
-  }
-
-  .progress {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .progress li {
-    margin: 0;
-    font-size: 0.78rem;
-    padding: 8px;
-  }
-
-  header {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-    padding: 1rem;
-  }
-
-  header nav ul {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-  }
-
-  .main-content {
-    width: 100%;
-  }
-
-  .container {
-    width: 95%;
-    margin: 20px auto 40px;
-    padding: 20px;
-  }
-
-  .quick-access {
-    padding: 1.5rem 1rem;
-    gap: 1rem;
-  }
-
-  .quick-access .card {
-    width: 100%;
-    max-width: 420px;
-  }
-
-  .hero {
-    padding: 2.5rem 1rem;
-  }
-
-  .hero h1 {
-    font-size: 1.8rem;
-  }
-
-  .rating-options {
-    flex-direction: column;
-  }
-
-  .btn,
-  .btn-small,
-  button {
-    width: 100%;
-    max-width: 420px;
-  }
-
-  #nextBtn {
-    float: none;
-    width: 100%;
-  }
-}*/

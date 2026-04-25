@@ -47,7 +47,7 @@
           Download Report
         </button>
 
-        <!-- TOP INFO STRIP -->
+        
       <div class="dashboard-top-row">
         <div class="stat-box">
           <span class="stat-label">Total Students</span>
@@ -66,7 +66,7 @@
         </div>
       </div>
 
-      <!-- PERFORMANCE CARDS -->
+      
       <div class="cards performance-cards">
         <div class="card">
           <h3>Avg Pre Score</h3>
@@ -97,7 +97,7 @@
         </div>
       </div>
 
-      <!-- SUMMARY / FEEDBACK -->
+     
       <div class="insight-box">
         <h3>Dashboard Summary</h3>
         <ul>
@@ -107,7 +107,7 @@
         </ul>
       </div>
 
-      <!-- CHARTS -->
+      
       <div class="charts">
       <div class="chart-container">
         <h3>Final Assessment Score Distribution</h3>
@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     Chart.register(ChartDataLabels);
 
-    // SCORE DISTRIBUTION
+    //score distribution
     const scoreOrder = ['Low', 'Medium', 'High'];
     const scoreMap = {};
     score_distribution.forEach(item => {
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // LEARNING STYLE
+    //learning style
     const styleLabels = learning_styles.map(x => x.learning_style);
     const styleData = learning_styles.map(x => x.count);
     const totalStyles = styleData.reduce((a, b) => a + b, 0);
@@ -266,7 +266,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // RECOMMENDATIONS
+    //recommendation
     const sortedRecommendations = [...recommendations].sort((a, b) => b.rec_count - a.rec_count);
     const recLabels = sortedRecommendations.map(x => x.module_name);
     const recData = sortedRecommendations.map(x => x.rec_count);

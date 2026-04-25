@@ -329,7 +329,7 @@ footer {
   color: #fff;
 }
 
-/* ===== NORMAL DESKTOP SIZE FIX ===== */
+/*desktop size*/
 html {
   font-size: 15px;
 }
@@ -361,30 +361,3 @@ header .logo {
 .content {
   min-width: 0;
 }
-
-/*@media (max-width: 900px) {
-  .admin-layout {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-  }
-
-  .content {
-    padding: 1rem;
-  }
-
-  .admin-panel {
-    padding: 1.25rem;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  table {
-    display: block;
-    overflow-x: auto;
-  }
-}*/

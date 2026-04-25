@@ -9,10 +9,8 @@
 </head>
 <body>
 
-<!-- HEADER -->
  <div class="layout">
 
-  <!-- SIDEBAR (ONLY SHOW AFTER LOGIN) -->
   {% if session.get('user_id') %}
   <aside class="sidebar">
     <h3>👤 {{ session.get('user_name') }}</h3>
@@ -82,7 +80,6 @@
 
       </div>
 
-      <!-- feedback -->
       <div class="feedback"></div>
 
     </div>

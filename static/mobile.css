@@ -1,4 +1,4 @@
-/* ===== MOBILE VIEW ONLY ===== */
+/*mobile view*/
 @media (max-width: 768px) {
   header {
     flex-direction: column;

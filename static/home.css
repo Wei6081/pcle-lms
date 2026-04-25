@@ -1,4 +1,3 @@
-/* GENERAL */
 * {
   margin: 0;
   padding: 0;
@@ -12,7 +11,6 @@ body {
   line-height: 1.6;
 }
 
-/* HEADER */
 header {
   display: flex;
   justify-content: space-between;
@@ -43,7 +41,6 @@ header nav ul li a:hover {
   text-decoration: underline;
 }
 
-/* HERO */
 .hero {
   text-align: center;
   padding: 3rem 1rem;
@@ -74,7 +71,6 @@ header nav ul li a:hover {
   background: #3b82f6;
 }
 
-/* QUICK ACCESS */
 .quick-access {
   display: flex;
   flex-wrap: wrap;
@@ -160,8 +156,8 @@ header nav ul li a:hover {
 
 .layout {
   display: flex;
-  flex: 1;              /* IMPORTANT */
-  min-height: 100vh;    /* forces full screen height */
+  flex: 1; 
+  min-height: 100vh; 
 }
 
 .sidebar {
@@ -207,7 +203,6 @@ header nav ul li a:hover {
   font-weight: bold;
 }
 
-/* ANNOUNCEMENTS */
 .announcements {
   background: #fff;
   padding: 3rem 1rem;
@@ -233,7 +228,6 @@ header nav ul li a:hover {
   text-align: left;
 }
 
-/* FOOTER */
 footer {
   text-align: center;
   padding: 1.5rem;
@@ -241,7 +235,7 @@ footer {
   color: #fff;
 }
 
-/* ===== NORMAL DESKTOP SIZE FIX ===== */
+/*desktop size*/
 html {
   font-size: 15px;
 }
@@ -274,90 +268,3 @@ header .logo {
   min-width: 0;
 }
 
-
-/* ===== MOBILE RESPONSIVE FIX ===== */
-/*@media (max-width: 768px) {
-  .layout {
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  .sidebar {
-    width: 100%;
-    padding: 12px;
-  }
-
-  .sidebar h3,
-  .sidebar p {
-    text-align: center;
-  }
-
-  .progress {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .progress li {
-    margin: 0;
-    font-size: 0.78rem;
-    padding: 8px;
-  }
-
-  header {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-    padding: 1rem;
-  }
-
-  header nav ul {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-  }
-
-  .main-content {
-    width: 100%;
-  }
-
-  .container {
-    width: 95%;
-    margin: 20px auto 40px;
-    padding: 20px;
-  }
-
-  .quick-access {
-    padding: 1.5rem 1rem;
-    gap: 1rem;
-  }
-
-  .quick-access .card {
-    width: 100%;
-    max-width: 420px;
-  }
-
-  .hero {
-    padding: 2.5rem 1rem;
-  }
-
-  .hero h1 {
-    font-size: 1.8rem;
-  }
-
-  .rating-options {
-    flex-direction: column;
-  }
-
-  .btn,
-  .btn-small,
-  button {
-    width: 100%;
-    max-width: 420px;
-  }
-
-  #nextBtn {
-    float: none;
-    width: 100%;
-  }
-}*/

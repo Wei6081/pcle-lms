@@ -155,7 +155,6 @@ def sync_progress_flags(user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Check student learning style
         cursor.execute("""
             SELECT learning_style 
             FROM students 
@@ -172,7 +171,6 @@ def sync_progress_flags(user_id=None):
 
         subject_id = get_current_subject_id()
 
-        # If current module exists, check that module progress
         if subject_id:
             cursor.execute("""
                 SELECT *
@@ -188,7 +186,6 @@ def sync_progress_flags(user_id=None):
             session['result_done'] = bool(progress and progress.get('final_score') is not None)
             session['recommend_done'] = bool(progress and progress.get('final_score') is not None)
 
-        # If no current module, check database generally
         else:
             cursor.execute("""
                 SELECT COUNT(*) AS completed_count
@@ -905,7 +902,6 @@ def result():
 
     session['result_done'] = data['final_score'] is not None
 
-    # check if feedback already submitted
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -1155,9 +1151,8 @@ def results():
     return redirect(url_for('result'))
 
 
-# -----------------------------
-# ADMIN DASHBOARD
-# -----------------------------
+
+#Admin dashboard
 @app.route('/admin_home')
 @admin_required
 def admin_home():
@@ -1265,9 +1260,7 @@ def admin_home():
     )
 
 
-# -----------------------------
-# ADMIN MODULE
-# -----------------------------
+#Admin module
 @app.route('/admin_modules')
 @admin_required
 def admin_manage_modules():
@@ -1398,9 +1391,8 @@ def admin_view_module(module_id):
         material_count=material_count
     )
 
-# -----------------------------
-# ADMIN QUESTION
-# -----------------------------
+
+#Admin question
 @app.route('/admin_questions')
 @admin_required
 def admin_manage_questions():
@@ -1555,9 +1547,8 @@ def admin_view_question(question_id):
 
     return render_template("admin_view_question.html", question=question)
 
-# -----------------------------
-# ADMIN MATERIAL
-# -----------------------------
+
+#Admin material
 @app.route('/admin_materials')
 @admin_required
 def admin_manage_materials():
@@ -1882,9 +1873,8 @@ def admin_view_material(material_id):
         k_case=k_case
     )
 
-# -----------------------------
-# ADMIN STUDENT MANAGEMENT
-# -----------------------------
+
+#Admin student management
 @app.route('/admin_manage_students')
 @admin_required
 def admin_manage_students():
@@ -1971,13 +1961,13 @@ def admin_reset_student_module(user_id, subject_id):
     WHERE user_id = %s AND subject_id = %s
     """, (user_id, subject_id))
     
-    # remove module progress for this student + module
+    
     cursor.execute("""
         DELETE FROM module_progress
         WHERE user_id = %s AND subject_id = %s
     """, (user_id, subject_id))
 
-    # remove feedback for same module
+    
     cursor.execute("""
         DELETE f
         FROM feedback f
@@ -2048,9 +2038,7 @@ def admin_delete_student(user_id):
     return redirect(url_for('admin_manage_students'))
 
 
-# -----------------------------
-# ADMIN FEEDBACK VIEW
-# -----------------------------
+#Admin view feedback
 @app.route('/admin_feedback')
 @admin_required
 def admin_feedback():
